@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "description": "Protótipo de mecanismo de auto-healing para testes E2E com Playwright, usando similaridade estrutural e atributos estáveis para relocalizar elementos com seletores quebrados.",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lluigecm/autohealing-e2e-tests.git"
@@ -18,6 +22,7 @@
   "homepage": "https://github.com/lluigecm/autohealing-e2e-tests#readme",
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@types/node": "^26.4.1"
+    "@types/node": "^26.4.1",
+    "typescript": "^7.0.2"
   }
 }
