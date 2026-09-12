@@ -1,0 +1,19 @@
+{
+  "selector": "role=article >> role=heading[level=3]",
+  "url": "/catalogue/page-2.html",
+  "tag": "h3",
+  "text": "In Her Wake",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": null,
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "article",
+    "parentSiblingIndex": 0,
+    "siblingIndex": 2,
+    "depth": 9
+  }
+}

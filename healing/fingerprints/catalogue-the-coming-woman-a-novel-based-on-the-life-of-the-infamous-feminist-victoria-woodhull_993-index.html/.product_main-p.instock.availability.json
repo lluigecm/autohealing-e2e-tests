@@ -1,0 +1,19 @@
+{
+  "selector": ".product_main p.instock.availability",
+  "url": "/catalogue/the-coming-woman-a-novel-based-on-the-life-of-the-infamous-feminist-victoria-woodhull_993/index.html",
+  "tag": "p",
+  "text": "In stock (19 available)",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "instock availability",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 2,
+    "depth": 7
+  }
+}

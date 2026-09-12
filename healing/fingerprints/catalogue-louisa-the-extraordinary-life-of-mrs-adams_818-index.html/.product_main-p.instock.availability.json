@@ -1,0 +1,19 @@
+{
+  "selector": ".product_main p.instock.availability",
+  "url": "/catalogue/louisa-the-extraordinary-life-of-mrs-adams_818/index.html",
+  "tag": "p",
+  "text": "In stock (15 available)",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "instock availability",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 2,
+    "depth": 7
+  }
+}

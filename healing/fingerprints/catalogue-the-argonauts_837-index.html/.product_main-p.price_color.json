@@ -1,0 +1,19 @@
+{
+  "selector": ".product_main p.price_color",
+  "url": "/catalogue/the-argonauts_837/index.html",
+  "tag": "p",
+  "text": "£10.93",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "price_color",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 1,
+    "depth": 7
+  }
+}

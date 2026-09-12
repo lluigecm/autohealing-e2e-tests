@@ -1,0 +1,19 @@
+{
+  "selector": ".product_main p.price_color",
+  "url": "/catalogue/scott-pilgrims-precious-little-life-scott-pilgrim-1_987/index.html",
+  "tag": "p",
+  "text": "£52.29",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "price_color",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 1,
+    "depth": 7
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "selector": "role=article",
+  "url": "/catalogue/category/books/music_14/index.html",
+  "tag": "article",
+  "text": "Rip it Up and ... £35.02 In stock Add to basket",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "product_pod",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "li",
+    "parentSiblingIndex": 0,
+    "siblingIndex": 0,
+    "depth": 8
+  }
+}

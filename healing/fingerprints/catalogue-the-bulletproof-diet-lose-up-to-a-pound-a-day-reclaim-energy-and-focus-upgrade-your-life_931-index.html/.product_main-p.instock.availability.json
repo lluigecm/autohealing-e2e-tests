@@ -1,0 +1,19 @@
+{
+  "selector": ".product_main p.instock.availability",
+  "url": "/catalogue/the-bulletproof-diet-lose-up-to-a-pound-a-day-reclaim-energy-and-focus-upgrade-your-life_931/index.html",
+  "tag": "p",
+  "text": "In stock (16 available)",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "instock availability",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 2,
+    "depth": 7
+  }
+}

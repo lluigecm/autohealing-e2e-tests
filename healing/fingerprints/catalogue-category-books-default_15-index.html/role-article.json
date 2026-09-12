@@ -1,0 +1,19 @@
+{
+  "selector": "role=article",
+  "url": "/catalogue/category/books/default_15/index.html",
+  "tag": "article",
+  "text": "The Coming Woman: A ... £17.93 In stock Add to basket",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "product_pod",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "li",
+    "parentSiblingIndex": 0,
+    "siblingIndex": 0,
+    "depth": 8
+  }
+}

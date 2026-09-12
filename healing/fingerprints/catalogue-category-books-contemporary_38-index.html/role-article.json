@@ -1,0 +1,19 @@
+{
+  "selector": "role=article",
+  "url": "/catalogue/category/books/contemporary_38/index.html",
+  "tag": "article",
+  "text": "When We Collided £31.77 In stock Add to basket",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "product_pod",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "li",
+    "parentSiblingIndex": 0,
+    "siblingIndex": 0,
+    "depth": 8
+  }
+}

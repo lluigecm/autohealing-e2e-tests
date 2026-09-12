@@ -5,7 +5,7 @@ test('exibe a lista de categorias e o grid de produtos', async ({ page }) => {
   const home = new HomePage(page);
   await home.goto();
 
-  await expect(home.categorySidebar).toBeVisible();
-  await expect(home.productCards.first()).toBeVisible();
+  await home.expectCategorySidebarVisible();
+  await home.expectProductGridVisible();
   expect(await home.getProductCount()).toBeGreaterThan(0);
 });

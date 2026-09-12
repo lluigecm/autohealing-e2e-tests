@@ -10,9 +10,9 @@ for (const { nome, slug } of categoriasAmostradas) {
     await category.openProductByIndex(0);
 
     const product = new ProductPage(page);
-    await expect(product.title).toBeVisible();
-    await expect(product.price).toBeVisible();
-    await expect(product.availability).toBeVisible();
+    await product.expectTitleVisible();
+    await product.expectPriceVisible();
+    await product.expectAvailabilityVisible();
     expect(await product.getTitleText()).not.toBe('');
   });
 
@@ -35,7 +35,7 @@ for (const { nome, slug } of categoriasAmostradas) {
     await category.openProductByIndex(0);
 
     const product = new ProductPage(page);
-    await expect(product.starRating).toBeVisible();
+    await product.expectStarRatingVisible();
 
     const rating = await product.getRatingValue();
     expect(rating).toBeGreaterThanOrEqual(1);

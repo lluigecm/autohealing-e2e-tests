@@ -2,9 +2,9 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 export class CategoryPage extends BasePage {
-  readonly heading: Locator;
-  readonly productCards: Locator;
-  readonly nextPageLink: Locator;
+  private readonly heading: Locator;
+  private readonly productCards: Locator;
+  private readonly nextPageLink: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -18,31 +18,33 @@ export class CategoryPage extends BasePage {
   }
 
   async getCategoryName(): Promise<string> {
-    return (await this.heading.textContent())?.trim() ?? '';
+    const text = await this.withCapture('role=heading[level=1]', this.heading, (l) => l.textContent());
+    return text?.trim() ?? '';
   }
 
   async getProductCount(): Promise<number> {
-    return this.productCards.count();
-  }
-
-  private productTitle(card: Locator): Locator {
-    return card.getByRole('heading', { level: 3 });
+    return this.withCapture('role=article', this.productCards, (l) => l.count());
   }
 
   async getProductTitles(): Promise<string[]> {
-    return this.productTitle(this.productCards).allTextContents();
+    const titles = this.productCards.getByRole('heading', { level: 3 });
+    return this.withCapture('role=article >> role=heading[level=3]', titles, (l) => l.allTextContents());
   }
 
   async openProductByIndex(index: number): Promise<void> {
-    const card = this.productCards.nth(index);
-    await this.productTitle(card).getByRole('link').click();
+    const link = this.productCards.nth(index).getByRole('heading', { level: 3 }).getByRole('link');
+    await this.withCapture(
+      `role=article[${index}] >> role=heading[level=3] >> role=link`,
+      link,
+      (l) => l.click(),
+    );
   }
 
   async hasNextPage(): Promise<boolean> {
-    return this.nextPageLink.isVisible();
+    return this.withCapture('role=link[name=next]', this.nextPageLink, (l) => l.isVisible());
   }
 
   async goToNextPage(): Promise<void> {
-    await this.nextPageLink.click();
+    await this.withCapture('role=link[name=next]', this.nextPageLink, (l) => l.click());
   }
 }
