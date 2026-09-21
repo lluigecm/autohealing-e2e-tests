@@ -1,24 +1,28 @@
-# Camada 1 — Captura de Fingerprint
+# Camada 1 — Captura de Fingerprint · Camada 3 (parcial) — Heurísticas
 
-Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte baseline, para servir de referência às heurísticas de recuperação (Camadas 2 e 3, ainda não implementadas).
+Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte baseline (Camada 1), e começa a consumir esse baseline nas heurísticas de recuperação (Camada 3). A detecção de falha (Camada 2) ainda não existe — a heurística é exercitada por chamada direta, não integrada ao fluxo dos testes.
+
+> Este arquivo descreve **como o mecanismo funciona**. O **porquê** de cada decisão, com as alternativas descartadas, está em [`DECISIONS.md`](DECISIONS.md).
 
 ## Módulos
 
 | Arquivo | Responsabilidade |
 |---|---|
-| `fingerprint.ts` | Schema (`Fingerprint`) — contrato consumido pelas heurísticas futuras |
+| `fingerprint.ts` | Schema (`Fingerprint`) — contrato consumido pelas heurísticas |
 | `withCapture.ts` | Ponto de extensão único entre Page Objects e `Locator`; extrai os dados do DOM |
 | `fingerprintStore.ts` | Persistência em `fingerprints/`, um arquivo JSON por elemento |
 | `withCapture.spec.ts` | Testes unitários da lógica de captura (sem navegador) |
+| `heuristics/attributeHeuristic.ts` | Heurística de atributos estáveis (Camada 3, parte 1/2) |
+| `heuristics/attributeHeuristic.spec.ts` | Testes unitários da heurística (DOM via `setContent`) |
 
 ## Testes
 
 ```bash
 npm test        # 66 testes E2E (playwright.config.ts) — regressão funcional da suíte baseline
-npm run test:unit  # testes unitários (playwright.unit.config.ts) — lógica do mecanismo de healing
+npm run test:unit  # 17 testes unitários (playwright.unit.config.ts) — lógica do mecanismo de healing
 ```
 
-São dois números com propósitos distintos e não devem ser somados num total só: a suíte E2E mede regressão funcional contra o site real, os unitários validam a lógica das heurísticas sem abrir navegador.
+São dois números com propósitos distintos e não devem ser somados num total só: a suíte E2E mede regressão funcional contra o site real, os unitários validam a lógica do mecanismo. Os unitários não tocam a rede — os que precisam de DOM montam a página com `page.setContent()`.
 
 Os unitários gravam num diretório temporário via `HEALING_FINGERPRINTS_DIR` — o baseline versionado em `fingerprints/` só recebe arquivos de execuções reais da suíte.
 
@@ -81,6 +85,29 @@ async expectTitleVisible(): Promise<void> {
   Consequência para o experimento: uma mutação que atinja somente um card que não é o primeiro não terá fingerprint de referência próprio — a recuperação teria que se apoiar no representante. Ao interpretar taxa de recuperação por elemento, considerar que a amostra cobre 1 elemento por coleção, não os N da listagem.
 
   Elementos acessados por índice (ex: `role=article[0] >> role=heading[level=3] >> role=link`, usado em `openProductByIndex`) **não** sofrem dessa limitação: cada índice é uma chave distinta e gera seu próprio fingerprint.
+
+## Heurística de atributos estáveis (`heuristics/attributeHeuristic.ts`)
+
+`matchByStableAttributes(page, fingerprint)` procura, no DOM atual, o elemento descrito por um fingerprint salvo. Devolve sempre um resultado — ausência de match é `{ matched: false, score: 0 }`, nunca exceção.
+
+Ordem de priorização, com o teto de confiança de cada uma:
+
+| # | Critério | Teto do score |
+|---|---|---|
+| 1 | `data-testid` idêntico | 1.00 |
+| 2 | `aria-label` idêntico | 0.90 |
+| 3 | Combinação dos demais `data-*`/`aria-*`, proporcional à fração que casou | 0.75 |
+| — | Sem candidato | 0.00 |
+
+A queda para o critério seguinte acontece tanto quando o atributo falta no fingerprint quanto quando ele não casa com nada no DOM atual.
+
+`class` e `id` **nunca** são critério de busca — só desempatam candidatos que já casaram em atributos estáveis. Um empate resolvido por volátil custa 20% do score (`×0.8`); um empate que nem os voláteis resolvem custa 50% (`×0.5`), porque aí a escolha é quase arbitrária. `ambiguous` é sinalizado sempre que houve mais de um candidato, mesmo quando o desempate elegeu um vencedor — quem decide se confia nisso é a camada de decisão, não a heurística.
+
+O score é **local a esta heurística**, não o score de confiança combinado da Camada 3 completa (que também vai incluir similaridade estrutural, ainda não implementada).
+
+### Limitação relevante para o experimento
+
+`applicable: false` marca o fingerprint sem nenhum atributo estável — a heurística não chegou a rodar, o que é diferente de ter rodado e não achado nada. **Os 134 fingerprints do baseline caem todos nesse caso**: books.toscrape.com não usa `data-*` nem `aria-*` em elemento nenhum. Na prática, a recuperação no site alvo vai depender inteiramente da similaridade estrutural; esta heurística está validada por fixtures e fica pronta para alvos que tenham esses atributos. Isso é resultado a reportar no TCC, não defeito da implementação.
 
 ## Estado atual
 
