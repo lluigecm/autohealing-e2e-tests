@@ -15,7 +15,9 @@
     "healing/**/*.ts",
     "pages/**/*.ts",
     "tests/**/*.ts",
+    "integration/**/*.ts",
     "playwright.config.ts",
-    "playwright.unit.config.ts"
+    "playwright.unit.config.ts",
+    "playwright.integration.config.ts"
   ]
 }

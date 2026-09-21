@@ -14,15 +14,19 @@ Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte 
 | `withCapture.spec.ts` | Testes unitários da lógica de captura (sem navegador) |
 | `heuristics/attributeHeuristic.ts` | Heurística de atributos estáveis (Camada 3, parte 1/2) |
 | `heuristics/attributeHeuristic.spec.ts` | Testes unitários da heurística (DOM via `setContent`) |
+| `heuristics/structuralHeuristic.ts` | Heurística de similaridade estrutural (Camada 3, parte 2/2) |
+| `heuristics/structuralHeuristic.spec.ts` | Testes unitários da heurística (DOM via `setContent`) |
+| `../integration/` | Testes de integração das heurísticas contra o alvo real |
 
 ## Testes
 
 ```bash
-npm test        # 66 testes E2E (playwright.config.ts) — regressão funcional da suíte baseline
-npm run test:unit  # 17 testes unitários (playwright.unit.config.ts) — lógica do mecanismo de healing
+npm test               # 66 testes E2E (playwright.config.ts) — regressão funcional da suíte baseline
+npm run test:unit      # 25 testes unitários (playwright.unit.config.ts) — lógica do mecanismo, zero rede
+npm run test:integration  # 8 testes de integração (playwright.integration.config.ts) — heurística contra o alvo real
 ```
 
-São dois números com propósitos distintos e não devem ser somados num total só: a suíte E2E mede regressão funcional contra o site real, os unitários validam a lógica do mecanismo. Os unitários não tocam a rede — os que precisam de DOM montam a página com `page.setContent()`.
+São **três números com propósitos distintos e não devem ser somados num total só**: a suíte E2E mede regressão funcional, os unitários validam a lógica do mecanismo sem tocar a rede (DOM via `page.setContent()`), e os de integração provam que a heurística funciona no site avaliado. Só a terceira categoria depende de rede, e é a única com `retries` — uma instabilidade de rede não deve ser lida como falha de heurística (ADR-009).
 
 Os unitários gravam num diretório temporário via `HEALING_FINGERPRINTS_DIR` — o baseline versionado em `fingerprints/` só recebe arquivos de execuções reais da suíte.
 
@@ -103,11 +107,45 @@ A queda para o critério seguinte acontece tanto quando o atributo falta no fing
 
 `class` e `id` **nunca** são critério de busca — só desempatam candidatos que já casaram em atributos estáveis. Um empate resolvido por volátil custa 20% do score (`×0.8`); um empate que nem os voláteis resolvem custa 50% (`×0.5`), porque aí a escolha é quase arbitrária. `ambiguous` é sinalizado sempre que houve mais de um candidato, mesmo quando o desempate elegeu um vencedor — quem decide se confia nisso é a camada de decisão, não a heurística.
 
-O score é **local a esta heurística**, não o score de confiança combinado da Camada 3 completa (que também vai incluir similaridade estrutural, ainda não implementada).
+O score é **local a esta heurística**, não o score de confiança combinado da Camada 3 completa — que vai fundir esta com a similaridade estrutural, numa etapa ainda por vir.
 
 ### Limitação relevante para o experimento
 
 `applicable: false` marca o fingerprint sem nenhum atributo estável — a heurística não chegou a rodar, o que é diferente de ter rodado e não achado nada. **Os 134 fingerprints do baseline caem todos nesse caso**: books.toscrape.com não usa `data-*` nem `aria-*` em elemento nenhum. Na prática, a recuperação no site alvo vai depender inteiramente da similaridade estrutural; esta heurística está validada por fixtures e fica pronta para alvos que tenham esses atributos. Isso é resultado a reportar no TCC, não defeito da implementação.
+
+⚠️ **Consequência para a etapa de score combinado:** `applicable: false` deve ser **excluído do cálculo**, nunca contado como match de confiança 0 — ver [ADR-007](DECISIONS.md). Contar como 0 rebaixaria pela metade a confiança de toda recuperação no alvo atual, medindo a falta de instrumentação do site em vez da qualidade do healing.
+
+## Heurística de similaridade estrutural (`heuristics/structuralHeuristic.ts`)
+
+`matchByStructuralSimilarity(page, fingerprint)` procura o elemento pela **posição na árvore**, sem olhar atributo nenhum. É a contraparte da heurística acima: aquela depende de instrumentação que o alvo não tem, esta depende de estrutura, que todo elemento tem.
+
+O score é a soma de quatro sinais, e não uma cascata de critérios — sinais estruturais se degradam por grau, não por presença:
+
+| Sinal | Peso | Como pontua |
+|---|---|---|
+| Pai (`parentTag` + índice do pai) | 0.45 | Cheio se tag e índice batem; metade se só a tag bate |
+| Índice entre irmãos | 0.30 | Decai com a distância, zera a 4 posições |
+| Profundidade | 0.15 | Decai com a distância, zera a 2 níveis |
+| Tag | 0.10 | Tudo ou nada |
+
+Candidatos abaixo de **0.25** são descartados como ruído — 0.25 é exatamente `profundidade + tag`, o critério mais fraco que ainda conta. `strategy` (`parent+siblingPosition`, `depth+tag`, `partial`) é rótulo descritivo de qual critério dominou; quem decide é o score.
+
+### O que a validação contra o alvo real mostrou
+
+- **`applicable` é `true` nos 134 fingerprints** — o inverso exato da heurística de atributos. No alvo atual é esta heurística que sustenta toda a recuperação.
+- **Sobrevive à reescrita de `class` e `id`** em página real, que é a tese central do trabalho nesta heurística.
+- **A discriminação morre dentro de containers repetidos.** Elementos a dois ou mais níveis abaixo do container que se repete são estruturalmente idênticos entre si: os 20 `h3` de uma listagem têm todos pai `article` no índice 0, irmão 2, profundidade 9 — o índice que separa os cards está no `<li>`, que é o **avô**, e o fingerprint guarda só um nível de ancestral. Nesses casos o resultado vem com `ambiguous: true` e o `candidateCount` real. O elemento devolvido é o correto, mas por convenção (captura usa `.first()`, desempate é ordem do documento), não por evidência estrutural. Ver [ADR-010](DECISIONS.md).
+
+O `article` em si não sofre desse problema: o pai dele *é* o `<li>` cujo índice varia.
+
+### Limite de identificabilidade posicional
+
+Duas classes de caso em que a similaridade estrutural é insuficiente **por princípio**, não por implementação:
+
+1. **Geometria idêntica.** Elementos dentro de containers repetidos são estruturalmente indistinguíveis por definição. Resultado: `ambiguous: true` com score alto.
+2. **Reordenação.** Medido no alvo real: invertendo a ordem dos cards, o fingerprint de `role=article` devolve o livro errado com **score 1.0 e `ambiguous: false`** — o `<li>` de índice 0 continua existindo, só que contém outro produto. Não há ambiguidade a sinalizar porque o match é único; está apenas errado. Nenhum sinal posicional distingue "o elemento se moveu" de "outro ocupou o lugar dele".
+
+O caso 2 está travado num teste de caracterização em `integration/structuralHeuristic.spec.ts` — quando a etapa de score ganhar um sinal de corroboração independente, esse teste deve falhar e ser reescrito. Ver [ADR-011](DECISIONS.md) e [ADR-012](DECISIONS.md), que carregam as duas restrições correspondentes para a etapa de score combinado.
 
 ## Estado atual
 
