@@ -1,6 +1,6 @@
-# Camada 1 — Captura de Fingerprint · Camada 3 (parcial) — Heurísticas
+# Camada 1 — Captura de Fingerprint · Camada 3 — Heurísticas e Score · Camada 4 — Decisão
 
-Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte baseline (Camada 1), e começa a consumir esse baseline nas heurísticas de recuperação (Camada 3). A detecção de falha (Camada 2) ainda não existe — a heurística é exercitada por chamada direta, não integrada ao fluxo dos testes.
+Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte baseline (Camada 1), consome esse baseline em duas heurísticas de recuperação e combina as duas num score de confiança (Camada 3), e converte esse score em decisão — substituir o seletor ou falhar (Camada 4). A detecção de falha (Camada 2) ainda não existe: o mecanismo é exercitado por chamada direta, não integrado ao fluxo dos testes.
 
 > Este arquivo descreve **como o mecanismo funciona**. O **porquê** de cada decisão, com as alternativas descartadas, está em [`DECISIONS.md`](DECISIONS.md).
 
@@ -16,17 +16,21 @@ Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte 
 | `heuristics/attributeHeuristic.spec.ts` | Testes unitários da heurística (DOM via `setContent`) |
 | `heuristics/structuralHeuristic.ts` | Heurística de similaridade estrutural (Camada 3, parte 2/2) |
 | `heuristics/structuralHeuristic.spec.ts` | Testes unitários da heurística (DOM via `setContent`) |
-| `../integration/` | Testes de integração das heurísticas contra o alvo real |
+| `decision/confidenceScore.ts` | Combinação das duas heurísticas num score de confiança (fecha a Camada 3) |
+| `decision/confidenceScore.spec.ts` | Testes unitários da combinação (resultados sintéticos, locators reais) |
+| `decision/decide.ts` | Limiar, decisão (substituir/falhar) e log estruturado (Camada 4) |
+| `decision/decide.spec.ts` | Testes unitários da decisão e do formato do log |
+| `../integration/` | Testes de integração das heurísticas e do score contra o alvo real |
 
 ## Testes
 
 ```bash
 npm test               # 66 testes E2E (playwright.config.ts) — regressão funcional da suíte baseline
-npm run test:unit      # 25 testes unitários (playwright.unit.config.ts) — lógica do mecanismo, zero rede
-npm run test:integration  # 8 testes de integração (playwright.integration.config.ts) — heurística contra o alvo real
+npm run test:unit      # 53 testes unitários (playwright.unit.config.ts) — lógica do mecanismo, zero rede
+npm run test:integration  # 15 testes de integração (playwright.integration.config.ts) — mecanismo contra o alvo real
 ```
 
-São **três números com propósitos distintos e não devem ser somados num total só**: a suíte E2E mede regressão funcional, os unitários validam a lógica do mecanismo sem tocar a rede (DOM via `page.setContent()`), e os de integração provam que a heurística funciona no site avaliado. Só a terceira categoria depende de rede, e é a única com `retries` — uma instabilidade de rede não deve ser lida como falha de heurística (ADR-009).
+São **três números com propósitos distintos e não devem ser somados num total só**: a suíte E2E mede regressão funcional, os unitários validam a lógica do mecanismo sem tocar a rede (DOM via `page.setContent()`), e os de integração provam que o mecanismo funciona no site avaliado. Só a terceira categoria depende de rede, e é a única com `retries` — uma instabilidade de rede não deve ser lida como falha de heurística (ADR-009).
 
 Os unitários gravam num diretório temporário via `HEALING_FINGERPRINTS_DIR` — o baseline versionado em `fingerprints/` só recebe arquivos de execuções reais da suíte.
 
@@ -145,8 +149,47 @@ Duas classes de caso em que a similaridade estrutural é insuficiente **por prin
 1. **Geometria idêntica.** Elementos dentro de containers repetidos são estruturalmente indistinguíveis por definição. Resultado: `ambiguous: true` com score alto.
 2. **Reordenação.** Medido no alvo real: invertendo a ordem dos cards, o fingerprint de `role=article` devolve o livro errado com **score 1.0 e `ambiguous: false`** — o `<li>` de índice 0 continua existindo, só que contém outro produto. Não há ambiguidade a sinalizar porque o match é único; está apenas errado. Nenhum sinal posicional distingue "o elemento se moveu" de "outro ocupou o lugar dele".
 
-O caso 2 está travado num teste de caracterização em `integration/structuralHeuristic.spec.ts` — quando a etapa de score ganhar um sinal de corroboração independente, esse teste deve falhar e ser reescrito. Ver [ADR-011](DECISIONS.md) e [ADR-012](DECISIONS.md), que carregam as duas restrições correspondentes para a etapa de score combinado.
+Os dois casos continuam travados em testes de caracterização em `integration/structuralHeuristic.spec.ts`: eles fixam o comportamento da heurística **isolada**, que não mudou e não deve mudar — o limite é dela. O que a combinação acrescenta é a segunda metade da evidência: o mesmo cenário de reordenação, atravessando `decision/confidenceScore.ts`, agora é rebaixado e recusado em `integration/confidenceScore.spec.ts`. Ver [ADR-011](DECISIONS.md), [ADR-012](DECISIONS.md) e, para como as restrições foram implementadas, [ADR-014](DECISIONS.md).
+
+## Score de confiança (`decision/confidenceScore.ts`)
+
+`combineConfidence(atributos, estrutural, fingerprint)` funde os dois resultados num `ConfidenceResult`. Os scores das heurísticas são **locais** — cada um mede a qualidade do casamento sob o seu próprio critério — e nenhum dos dois decide nada sozinho.
+
+Quatro passos, nesta ordem:
+
+| Passo | Regra | Efeito |
+|---|---|---|
+| 1 · Aplicabilidade | `applicable: false` sai do cálculo; nenhuma aplicável → `score: null` | ADR-007 |
+| 2 · Combinação | Maior score entre as que acharam candidato; elementos divergentes aplicam ×0.5 | ADR-013 |
+| 3 · Ambiguidade | `ambiguous: true` não resolvido aplica ×0.5 sobre o combinado | ADR-011, ADR-015 |
+| 4 · Corroboração por texto | Fator em [0.5, 1.0] pela similaridade de token entre `fingerprint.text` e o texto do candidato | ADR-012, ADR-014 |
+
+`score: null` é **"sem confiança"**, não zero: zero afirmaria que se mediu e não se achou nada. O tipo obriga todo chamador a tratar os dois casos à parte. `reason` distingue `no-applicable-heuristic` de `no-candidate-found`, e `flags` registra cada caso especial que participou do cálculo — é o que o log de auditoria da Camada 4 carrega.
+
+A corroboração por texto é o **único sinal do mecanismo independente de posição**, e por isso o único capaz de rebaixar um match geometricamente perfeito porém incorreto. Entra sempre **depois** do match, nunca como critério de busca, e desconta em vez de rejeitar: conteúdo muda legitimamente entre versões de uma página.
+
+## Decisão (`decision/decide.ts`)
+
+`decide(fingerprint, confidence, options?)` devolve `replace` ou `fail`, sempre registrando a decisão.
+
+- **Limiar:** `CONFIDENCE_THRESHOLD = 0.7`, inclusivo, sobrescrevível por chamada. **Valor provisório** — a etapa de experimentos vai calibrá-lo, e ele não deve ser citado como validado (ADR-016).
+- **Acima:** substitui e devolve o candidato; a entrada de log tem página, seletor original, descrição do candidato, score, limiar vigente, heurísticas contribuintes, flags e o timestamp da **decisão**.
+- **Abaixo, incluindo "sem confiança":** falha sem recuperação e **não** devolve o candidato. Falhar visivelmente é melhor que mascarar defeito real com um falso positivo silencioso.
+- O log registra as **duas** decisões: sem as falhas não há denominador para calcular taxa de recuperação nos experimentos.
+
+### O que o score mostrou no alvo real
+
+| Cenário (medido) | Score | Decisão |
+|---|---|---|
+| Geometria discriminante, página íntegra | 1.00 | substitui |
+| `class` e `id` reescritos em página real | 1.00 | substitui |
+| Edição leve de conteúdo (1 token distinto em 9) | 0.875 | substitui |
+| Elemento em estrutura repetida (20 candidatos) | 0.50 | **falha** |
+| Reordenação de cards (ADR-012) | 0.50 | **falha** |
+| Reordenação + estrutura repetida | 0.25 | **falha** |
+
+Duas leituras que valem para o texto do trabalho: no alvo avaliado **só elementos de geometria discriminante são curáveis sem revisão humana** — acertar por ordem do documento não conta como evidência (ADR-015) — e, como a heurística de atributos é inaplicável aqui (ADR-006), **o caminho de divergência entre heurísticas nunca é exercitado sob dados reais** (ADR-013).
 
 ## Estado atual
 
-Uma execução completa da suíte baseline (66 testes) gera **134 fingerprints** em 34 páginas.
+Uma execução completa da suíte baseline (66 testes) gera **134 fingerprints** em 34 páginas. Com a combinação e a decisão implementadas, o mecanismo está funcionalmente completo exceto pela Camada 2: nada ainda **detecta** a falha de locator e chama `combineConfidence` automaticamente.

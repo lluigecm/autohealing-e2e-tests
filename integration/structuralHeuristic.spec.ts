@@ -145,8 +145,14 @@ test.describe('limite de identificabilidade posicional', () => {
    * passa a descrever com precisão um elemento *diferente*. A heurística não tem
    * como perceber — e não percebe.
    *
-   * Quando a etapa de score ganhar um sinal de corroboração independente
-   * (ADR-012), este teste deve falhar e ser reescrito. É o ponto.
+   * Este teste **continua passando de propósito**: ele fixa o limite da
+   * heurística isolada, que não mudou — nenhum sinal posicional poderia
+   * distinguir "o elemento se moveu" de "outro ocupou o lugar dele". O que a
+   * etapa de score acrescentou foi a outra metade da evidência: o mesmo cenário,
+   * atravessando a combinação, é rebaixado pela corroboração de texto e recusado
+   * pela camada de decisão — ver `confidenceScore.spec.ts`, "regressão do
+   * ADR-012". As duas asserções juntas são o argumento de por que a combinação
+   * existe e por que uma heurística sozinha não basta.
    */
   test('reordenar cards produz match incorreto com confiança máxima', async ({ page }) => {
     const fingerprint = await loadFingerprint({
