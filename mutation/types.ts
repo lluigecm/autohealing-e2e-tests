@@ -100,7 +100,9 @@ export const MUTATION_STATE_KEY = '__mutation';
  * como atributo: um `data-*`/`aria-*` no DOM contaminaria a heurística de
  * atributos estáveis (ADR-006/007).
  *
- * `applied: false` significa que o alvo não existe na página (nada foi feito).
+ * `applied: false` significa que nada foi transformado: o alvo não existe na
+ * página (ex: o link "Travel" na própria página Travel), o grupo do M3 não o
+ * contém, ou a edição leve `drop-last-token` caiu num texto de um token só.
  * `applied: true` com `oracle: null` é o M5: o alvo foi removido e toda
  * recuperação é incorreta por definição.
  */
