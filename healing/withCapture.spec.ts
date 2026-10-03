@@ -67,3 +67,27 @@ test('grava JSON completo quando há fingerprint', async () => {
   expect(JSON.parse(gravado)).toEqual(FINGERPRINT);
   expect(warnings).toEqual([]);
 });
+
+test.describe('interruptor HEALING_CAPTURE=off', () => {
+  test.afterEach(() => {
+    delete process.env.HEALING_CAPTURE;
+  });
+
+  test('não grava fingerprint válido nem avisa', async () => {
+    process.env.HEALING_CAPTURE = 'off';
+
+    await persistFingerprint(FINGERPRINT, CONTEXT);
+    await persistFingerprint(null, CONTEXT);
+
+    expect(await readdir(capturedDir)).toEqual([]);
+    expect(warnings).toEqual([]);
+  });
+
+  test('qualquer outro valor mantém a captura ligada', async () => {
+    process.env.HEALING_CAPTURE = 'on';
+
+    await persistFingerprint(FINGERPRINT, CONTEXT);
+
+    expect(JSON.parse(await readFile(fingerprintPath(FINGERPRINT), 'utf8'))).toEqual(FINGERPRINT);
+  });
+});
