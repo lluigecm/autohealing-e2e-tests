@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { createHash } from 'crypto';
-import { readFile, readdir } from 'fs/promises';
+import { readFile, readdir, writeFile } from 'fs/promises';
 import path from 'path';
-import { findMutation } from '../mutation/catalog';
+import { CATALOG, findMutation } from '../mutation/catalog';
 import { applyMutation, readMutationState } from '../mutation/applyMutation';
+import { measureMatrix } from './mutationMatrix';
 
 /**
  * Ferramenta de mutação contra o alvo real. A checagem de hash do baseline é a
@@ -67,4 +68,40 @@ test('alvo ausente: o link "Travel" não existe na própria página Travel (appl
     });
     await fresh.close();
   }
+});
+
+const MATRIX_PATH = path.resolve(__dirname, '..', 'mutation', 'effectiveness-matrix.json');
+
+/**
+ * Matriz de efetividade (ADR-020). Sem `MUTATION_MATRIX_OUT`, compara a medição
+ * com a matriz versionada em `mutation/` — caracterização: uma divergência é um
+ * achado a investigar, não um teste a reexecutar. Com a variável, grava a
+ * medição no caminho indicado (o arquivo versionado nunca é editado à mão).
+ */
+test.describe('matriz de efetividade', () => {
+  // Retry repetiria a medição até concordar e esconderia divergência entre rodadas.
+  test.describe.configure({ retries: 0 });
+
+  test('estado do locator e reprodução do teste baseline, sem recuperação', async ({ context }) => {
+    test.setTimeout(30 * 60_000);
+
+    const rows = await measureMatrix(context, CATALOG);
+    for (const row of rows) {
+      expect.soft(row.applied, `${row.id} aplicada na página de referência`).toBe(true);
+      expect.soft(row.effect, `${row.id} efeito verificado`).toBe(true);
+    }
+
+    const content = `${JSON.stringify(
+      { geradoPor: 'integration/mutation.spec.ts — não editar à mão', linhas: rows },
+      null,
+      2,
+    )}\n`;
+
+    const out = process.env.MUTATION_MATRIX_OUT;
+    if (out) {
+      await writeFile(path.resolve(out), content, 'utf8');
+    } else {
+      expect(content).toBe(await readFile(MATRIX_PATH, 'utf8'));
+    }
+  });
 });
