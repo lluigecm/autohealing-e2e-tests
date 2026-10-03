@@ -1,7 +1,3 @@
-// Antes de qualquer import que alcance `withCapture`: sob DOM mutado, nenhuma
-// ação pode regravar o baseline versionado (ADR-017).
-process.env.HEALING_CAPTURE = 'off';
-
 import { test, expect } from '@playwright/test';
 import { createHash } from 'crypto';
 import { readFile, readdir } from 'fs/promises';
@@ -31,12 +27,27 @@ async function baselineHash(): Promise<string> {
 }
 
 let hashBefore: string;
+let previousCapture: string | undefined;
 
+/**
+ * Sob DOM mutado, nenhuma ação pode regravar o baseline versionado (ADR-017).
+ * Definido e restaurado nos hooks, não no nível do módulo: o worker é
+ * reaproveitado entre arquivos, e a captura desligada não pode vazar para eles.
+ * `persistFingerprint` lê a variável a cada chamada, então basta estar definida
+ * antes dos testes.
+ */
 test.beforeAll(async () => {
+  previousCapture = process.env.HEALING_CAPTURE;
+  process.env.HEALING_CAPTURE = 'off';
   hashBefore = await baselineHash();
 });
 
 test.afterAll(async () => {
+  if (previousCapture === undefined) {
+    delete process.env.HEALING_CAPTURE;
+  } else {
+    process.env.HEALING_CAPTURE = previousCapture;
+  }
   expect(await baselineHash(), 'healing/fingerprints/ mudou durante a execução').toBe(hashBefore);
 });
 

@@ -69,8 +69,20 @@ test('grava JSON completo quando há fingerprint', async () => {
 });
 
 test.describe('interruptor HEALING_CAPTURE=off', () => {
+  // Restaura o valor anterior em vez de apagar: o worker é reaproveitado entre
+  // arquivos, e um valor herdado não pode sumir por causa deste spec.
+  let previous: string | undefined;
+
+  test.beforeEach(() => {
+    previous = process.env.HEALING_CAPTURE;
+  });
+
   test.afterEach(() => {
-    delete process.env.HEALING_CAPTURE;
+    if (previous === undefined) {
+      delete process.env.HEALING_CAPTURE;
+    } else {
+      process.env.HEALING_CAPTURE = previous;
+    }
   });
 
   test('não grava fingerprint válido nem avisa', async () => {

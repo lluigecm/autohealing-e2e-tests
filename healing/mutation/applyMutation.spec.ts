@@ -153,7 +153,7 @@ test('determinismo: duas aplicações sobre o mesmo DOM produzem o mesmo DOM', a
     const first = (await run(page, planOf(spec))).html;
     await load(page, fixtureFor(spec));
     const second = (await run(page, planOf(spec))).html;
-    expect(second, spec.id).toBe(first);
+    expect.soft(second, spec.id).toBe(first);
   }
 });
 
