@@ -18,7 +18,7 @@ import { CONFIDENCE_THRESHOLD, decide } from '../healing/decision/decide';
  * versionados da Camada 1 e as duas heurísticas de verdade — não resultados
  * construídos à mão como nos unitários.
  *
- * É aqui que a restrição 3 (ADR-012) deixa de ser documentação e passa a ser
+ * É aqui que a restrição 3 (corroboração por texto) deixa de ser documentação e passa a ser
  * comportamento verificado: o teste de reordenação abaixo é o critério de
  * conclusão desta etapa.
  */
@@ -68,7 +68,7 @@ test.describe('página íntegra', () => {
     expect(decide(fingerprint, confidence).decision).toBe('replace');
   });
 
-  test('a combinação é de uma heurística só no alvo real (ADR-006)', async ({ page }) => {
+  test('a combinação é de uma heurística só no alvo real', async ({ page }) => {
     const fingerprint = await loadFingerprint(AMOSTRA_DISCRIMINANTE);
     await page.goto(fingerprint.url);
 
@@ -90,7 +90,7 @@ test.describe('página íntegra', () => {
 
     const confidence = await confidenceFor(page, fingerprint);
 
-    // O texto corrobora — o elemento devolvido *é* o certo (ADR-010) — mas a
+    // O texto corrobora — o elemento devolvido *é* o certo — mas a
     // ambiguidade de 20 candidatos idênticos derruba o score abaixo do limiar.
     // No alvo atual, portanto, só geometria discriminante se cura: acertar por
     // ordem do documento não é evidência suficiente para substituir sem revisão.
@@ -122,7 +122,7 @@ test.describe('mutação de class e id', () => {
   });
 });
 
-test.describe('regressão do ADR-012 — reordenação', () => {
+test.describe('regressão — reordenação', () => {
   /**
    * Contraparte do teste de caracterização em `structuralHeuristic.spec.ts`:
    * lá a heurística isolada devolve score 1.0 e `ambiguous: false` para o

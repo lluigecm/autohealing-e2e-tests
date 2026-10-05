@@ -12,10 +12,10 @@ import {
 import { MutationSpec } from '../../mutation/types';
 
 /**
- * Unitários da transformação, sem rede (ADR-005). As fixtures reproduzem a
+ * Unitários da transformação, sem rede. As fixtures reproduzem a
  * estrutura do books.toscrape.com nos pontos que os seletores do catálogo
- * tocam, e — como o site real (ADR-006) — não têm nenhum `data-*`/`aria-*`.
- * Moram sob `healing/` só por causa do `testDir` da config unitária (ADR-018).
+ * tocam, e — como o site real — não têm nenhum `data-*`/`aria-*`.
+ * Moram sob `healing/` só por causa do `testDir` da config unitária.
  */
 
 const SIDEBAR = `

@@ -4,7 +4,7 @@ import { matchByStructuralSimilarity } from './structuralHeuristic';
 
 /**
  * Testes unitários puros: DOM montado com `setContent`, zero rede (§6.1 do
- * contexto, ADR-005). A validação contra o site real fica nos testes de
+ * contexto). A validação contra o site real fica nos testes de
  * integração, em `integration/`, sob outra config.
  *
  * As geometrias dos fixtures estão anotadas nos comentários porque são o que os

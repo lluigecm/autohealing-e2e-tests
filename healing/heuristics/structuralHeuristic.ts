@@ -50,8 +50,8 @@ export interface StructuralMatchResult {
   matchedSignals: StructuralSignal[];
   /**
    * `false` só quando o fingerprint não tem posição estrutural utilizável
-   * (elemento sem pai capturado). Esperado ser `true` na prática — ver
-   * ADR-010: é `true` nos 134 fingerprints do baseline.
+   * (elemento sem pai capturado). Esperado ser `true` na prática: é `true`
+   * nos 134 fingerprints do baseline.
    */
   applicable: boolean;
 }

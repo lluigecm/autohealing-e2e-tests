@@ -9,7 +9,7 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * Config própria, e não uma extensão da `playwright.unit.config.ts`, porque os
  * dois propósitos exigem garantias diferentes: os unitários provam lógica e por
- * isso não tocam a rede (ADR-005); estes provam comportamento no alvo e por isso
+ * isso não tocam a rede; estes provam comportamento no alvo e por isso
  * precisam dela. Misturá-los tiraria dos unitários a propriedade que os torna
  * confiáveis.
  *

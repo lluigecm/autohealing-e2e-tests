@@ -26,9 +26,9 @@ import {
  * **Valor provisório, candidato a ajuste na etapa de experimentos.** 0.7 fica na
  * margem entre o pior caso de recuperação legítima e o melhor caso de falso
  * positivo conhecido: no alvo atual, um match geométrico perfeito sob
- * reordenação (ADR-012) chega descontado a 0.50 pela corroboração de texto, e
- * ambiguidade não resolvida (ADR-010) também a 0.50. Os experimentos podem
- * mostrar que a margem é larga ou estreita demais — nesse caso, ADR novo.
+ * reordenação chega descontado a 0.50 pela corroboração de texto, e
+ * ambiguidade não resolvida também a 0.50. Os experimentos podem mostrar que
+ * a margem é larga ou estreita demais.
  */
 export const CONFIDENCE_THRESHOLD = 0.7;
 
@@ -52,7 +52,7 @@ export interface HealingLogEntry {
   originalSelector: string;
   /** Descrição do candidato escolhido, ou `null` quando não houve candidato. */
   candidate: string | null;
-  /** `null` quando nenhuma heurística era aplicável (restrição 4 do ADR-007). */
+  /** `null` quando nenhuma heurística era aplicável (restrição 4 de `combineConfidence`). */
   score: number | null;
   /** Registrado junto porque é ajustável: um log antigo tem de ser relido com o limiar da época. */
   threshold: number;

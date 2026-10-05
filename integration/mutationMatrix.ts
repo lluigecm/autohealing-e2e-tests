@@ -7,7 +7,7 @@ import { applyMutation, pointsToOracle, readMutationState } from '../mutation/ap
 import { MUTATION_STATE_KEY, MutationSpec, MutationTarget } from '../mutation/types';
 
 /**
- * Matriz de efetividade (ADR-020): para cada entrada do catálogo, **sem
+ * Matriz de efetividade: para cada entrada do catálogo, **sem
  * recuperação**, o estado do locator original do Page Object e a reprodução do
  * teste baseline que exercita o alvo.
  *

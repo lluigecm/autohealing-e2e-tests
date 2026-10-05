@@ -13,10 +13,10 @@ import {
 } from './confidenceScore';
 
 /**
- * Testes unitários da combinação: DOM montado com `setContent`, zero rede
- * (ADR-005). Os resultados das heurísticas são construídos à mão de propósito —
- * o que está sob teste é a aritmética da combinação e as quatro restrições
- * herdadas, não as heurísticas, que têm testes próprios.
+ * Testes unitários da combinação: DOM montado com `setContent`, zero rede.
+ * Os resultados das heurísticas são construídos à mão de propósito — o que
+ * está sob teste é a aritmética da combinação e as quatro restrições, não as
+ * heurísticas, que têm testes próprios.
  *
  * Os locators, porém, são reais: a comparação de divergência e a corroboração de
  * texto consultam o DOM, e um mock de `Locator` validaria o mock.
@@ -113,7 +113,7 @@ test.describe('restrição 1 e 4 — aplicabilidade', () => {
   }) => {
     await page.setContent(LISTAGEM);
 
-    // Caso do alvo real (ADR-006): atributos inaplicável, estrutural sozinha.
+    // Caso do alvo real: atributos inaplicável, estrutural sozinha.
     const result = await combineConfidence(
       attributeResult({ applicable: false }),
       structuralResult({ applicable: true, matched: true, score: 1, locator: primeiroCard(page) }),
@@ -203,11 +203,11 @@ test.describe('passo 2 — combinação das duas aplicáveis', () => {
   });
 });
 
-test.describe('passo 3 — restrição 2 (ADR-011)', () => {
+test.describe('passo 3 — restrição 2', () => {
   test('ambiguidade não resolvida não cruza o limiar sozinha', async ({ page }) => {
     await page.setContent(LISTAGEM);
 
-    // O caso do ADR-010: 20 cards de geometria idêntica, score bruto 1.0.
+    // Geometria idêntica: 20 cards de geometria idêntica, score bruto 1.0.
     const result = await combineConfidence(
       attributeResult({ applicable: false }),
       structuralResult({
@@ -276,7 +276,7 @@ test.describe('passo 3 — restrição 2 (ADR-011)', () => {
   });
 });
 
-test.describe('passo 4 — restrição 3 (ADR-012)', () => {
+test.describe('passo 4 — restrição 3', () => {
   test('match geométrico perfeito no elemento errado é rebaixado pelo texto', async ({ page }) => {
     await page.setContent(LISTAGEM);
 

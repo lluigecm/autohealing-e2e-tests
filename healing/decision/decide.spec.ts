@@ -94,7 +94,7 @@ test.describe('limiar', () => {
     const baixa = confidence({ score: 0.5, locator });
 
     expect(decide(fingerprint(), baixa, options).decision).toBe('fail');
-    // A ressalva do ADR-016: 0.7 é provisório, e a etapa de experimentos vai
+    // 0.7 é provisório, e a etapa de experimentos vai
     // varrer valores sem precisar de alteração de código.
     expect(decide(fingerprint(), baixa, { ...options, threshold: 0.4 }).decision).toBe('replace');
   });

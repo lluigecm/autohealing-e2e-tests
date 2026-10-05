@@ -10,7 +10,7 @@ import { StructuralMatchResult } from '../heuristics/structuralHeuristic';
  * do casamento sob o seu próprio critério, e nenhum dos dois é suficiente para
  * decidir se o seletor pode ser substituído automaticamente. Esta função produz
  * o número que a camada de decisão (`decide.ts`) usa, aplicando as quatro
- * restrições herdadas dos ADR-007, 011 e 012:
+ * restrições a seguir:
  *
  * 1. `applicable: false` é excluída do cálculo, nunca contada como score 0.
  * 2. Ambiguidade não resolvida desconta o score combinado.
@@ -31,7 +31,7 @@ export type ConfidenceFlag =
   | 'heuristics-agree'
   /** As duas aplicáveis apontaram elementos diferentes — descontou o score. */
   | 'heuristics-disagree'
-  /** Uma heurística aplicável rodou e não achou nada (ADR-004). */
+  /** Uma heurística aplicável rodou e não achou nada. */
   | 'searched-without-match'
   /** O texto do candidato divergiu do fingerprint — descontou o score. */
   | 'text-corroboration-divergent'
@@ -229,7 +229,7 @@ export async function combineConfidence(
   const contributingHeuristics = applicable.map(contribution);
   const flags: ConfidenceFlag[] = [];
 
-  // Passo 1 — restrição 1 (ADR-007) e restrição 4.
+  // Passo 1 — restrição 1 e restrição 4.
   if (applicable.length === 0) {
     return noConfidence('no-applicable-heuristic', contributingHeuristics, flags);
   }
@@ -262,7 +262,7 @@ export async function combineConfidence(
     }
   }
 
-  // Passo 3 — restrição 2 (ADR-011), sobre o score já combinado. Uma heurística
+  // Passo 3 — restrição 2, sobre o score já combinado. Uma heurística
   // ambígua pode ser desambiguada pela outra, mas só se as duas concordarem no
   // elemento e ao menos uma delas não estiver ambígua.
   const anyAmbiguous = matched.some((participant) => participant.ambiguous);
@@ -277,7 +277,7 @@ export async function combineConfidence(
     }
   }
 
-  // Passo 4 — restrição 3 (ADR-012): o único sinal do mecanismo que não depende
+  // Passo 4 — restrição 3: o único sinal do mecanismo que não depende
   // de posição, e por isso o único capaz de rebaixar um match geometricamente
   // perfeito mas incorreto.
   let similarity: number | null = null;

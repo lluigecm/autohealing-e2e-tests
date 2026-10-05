@@ -31,7 +31,7 @@ let hashBefore: string;
 let previousCapture: string | undefined;
 
 /**
- * Sob DOM mutado, nenhuma ação pode regravar o baseline versionado (ADR-017).
+ * Sob DOM mutado, nenhuma ação pode regravar o baseline versionado.
  * Definido e restaurado nos hooks, não no nível do módulo: o worker é
  * reaproveitado entre arquivos, e a captura desligada não pode vazar para eles.
  * `persistFingerprint` lê a variável a cada chamada, então basta estar definida
@@ -73,7 +73,7 @@ test('alvo ausente: o link "Travel" não existe na própria página Travel (appl
 const MATRIX_PATH = path.resolve(__dirname, '..', 'mutation', 'effectiveness-matrix.json');
 
 /**
- * Matriz de efetividade (ADR-020). Sem `MUTATION_MATRIX_OUT`, compara a medição
+ * Matriz de efetividade. Sem `MUTATION_MATRIX_OUT`, compara a medição
  * com a matriz versionada em `mutation/` — caracterização: uma divergência é um
  * achado a investigar, não um teste a reexecutar. Com a variável, grava a
  * medição no caminho indicado (o arquivo versionado nunca é editado à mão).

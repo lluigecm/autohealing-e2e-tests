@@ -44,7 +44,7 @@ const AMOSTRA_DISCRIMINANTE = [
  * nível de ancestral.
  *
  * O match continua **correto** (ver asserções abaixo), mas a heurística sinaliza
- * a ambiguidade em vez de escondê-la. Ver ADR-010.
+ * a ambiguidade em vez de escondê-la.
  */
 const AMOSTRA_AMBIGUA = [
   {
@@ -150,8 +150,8 @@ test.describe('limite de identificabilidade posicional', () => {
    * distinguir "o elemento se moveu" de "outro ocupou o lugar dele". O que a
    * etapa de score acrescentou foi a outra metade da evidência: o mesmo cenário,
    * atravessando a combinação, é rebaixado pela corroboração de texto e recusado
-   * pela camada de decisão — ver `confidenceScore.spec.ts`, "regressão do
-   * ADR-012". As duas asserções juntas são o argumento de por que a combinação
+   * pela camada de decisão — ver `confidenceScore.spec.ts`, "regressão —
+   * reordenação". As duas asserções juntas são o argumento de por que a combinação
    * existe e por que uma heurística sozinha não basta.
    */
   test('reordenar cards produz match incorreto com confiança máxima', async ({ page }) => {
@@ -181,7 +181,7 @@ test.describe('limite de identificabilidade posicional', () => {
 test.describe('baseline versionado', () => {
   test('a posição estrutural é utilizável nos 134 fingerprints do alvo', async () => {
     // Sem rede, mas pertence a esta categoria: é uma afirmação sobre os dados do
-    // alvo real, não sobre a lógica da heurística. Sustenta o ADR-010.
+    // alvo real, não sobre a lógica da heurística.
     const arquivos: Fingerprint[] = [];
     for (const dir of await readdir(FINGERPRINTS_DIR)) {
       for (const file of await readdir(path.join(FINGERPRINTS_DIR, dir))) {

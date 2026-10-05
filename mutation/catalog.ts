@@ -138,7 +138,7 @@ const REORDER_GROUPS: ReadonlyArray<[readonly MutationTarget[], string]> = [
 /**
  * Textos do M2, só em links (rótulos clicáveis). O relabel total simula
  * localização para o português. As edições leves existem para que o M2 tenha
- * casos em que a recuperação é alcançável (ADR-018): `drop-last-token` em T3
+ * casos em que a recuperação é alcançável: `drop-last-token` em T3
  * (inerte previsto — o locator de T3 é por índice) e `append-token` em
  * "Sequential Art", a categoria de mais tokens da amostra (dois; não há de três).
  */

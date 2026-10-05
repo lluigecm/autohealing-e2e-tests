@@ -98,7 +98,7 @@ async function extractFingerprint(
  * `HEALING_CAPTURE=off` desliga a gravação, e só ela: a extração e a assinatura
  * de `withCapture` não mudam. Sob DOM mutado, uma ação que ainda funcione
  * sobrescreveria o baseline versionado em `healing/fingerprints/` com dados
- * mutados (ADR-017). Lida a cada chamada para que os testes possam alterná-la.
+ * mutados. Lida a cada chamada para que os testes possam alterná-la.
  */
 export async function persistFingerprint(
   fingerprint: Fingerprint | null,

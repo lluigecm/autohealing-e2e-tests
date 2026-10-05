@@ -2,8 +2,6 @@
 
 Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte baseline (Camada 1), consome esse baseline em duas heurísticas de recuperação e combina as duas num score de confiança (Camada 3), e converte esse score em decisão — substituir o seletor ou falhar (Camada 4). A detecção de falha (Camada 2) ainda não existe: o mecanismo é exercitado por chamada direta, não integrado ao fluxo dos testes.
 
-> Este arquivo descreve **como o mecanismo funciona**. O **porquê** de cada decisão, com as alternativas descartadas, está em [`DECISIONS.md`](DECISIONS.md).
-
 ## Módulos
 
 | Arquivo | Responsabilidade |
@@ -30,7 +28,7 @@ npm run test:unit      # 53 testes unitários (playwright.unit.config.ts) — l�
 npm run test:integration  # 15 testes de integração (playwright.integration.config.ts) — mecanismo contra o alvo real
 ```
 
-São **três números com propósitos distintos e não devem ser somados num total só**: a suíte E2E mede regressão funcional, os unitários validam a lógica do mecanismo sem tocar a rede (DOM via `page.setContent()`), e os de integração provam que o mecanismo funciona no site avaliado. Só a terceira categoria depende de rede, e é a única com `retries` — uma instabilidade de rede não deve ser lida como falha de heurística (ADR-009).
+São **três números com propósitos distintos e não devem ser somados num total só**: a suíte E2E mede regressão funcional, os unitários validam a lógica do mecanismo sem tocar a rede (DOM via `page.setContent()`), e os de integração provam que o mecanismo funciona no site avaliado. Só a terceira categoria depende de rede, e é a única com `retries` — uma instabilidade de rede não deve ser lida como falha de heurística.
 
 Os unitários gravam num diretório temporário via `HEALING_FINGERPRINTS_DIR` — o baseline versionado em `fingerprints/` só recebe arquivos de execuções reais da suíte.
 
@@ -117,7 +115,7 @@ O score é **local a esta heurística**, não o score de confiança combinado da
 
 `applicable: false` marca o fingerprint sem nenhum atributo estável — a heurística não chegou a rodar, o que é diferente de ter rodado e não achado nada. **Os 134 fingerprints do baseline caem todos nesse caso**: books.toscrape.com não usa `data-*` nem `aria-*` em elemento nenhum. Na prática, a recuperação no site alvo vai depender inteiramente da similaridade estrutural; esta heurística está validada por fixtures e fica pronta para alvos que tenham esses atributos. Isso é resultado a reportar no TCC, não defeito da implementação.
 
-⚠️ **Consequência para a etapa de score combinado:** `applicable: false` deve ser **excluído do cálculo**, nunca contado como match de confiança 0 — ver [ADR-007](DECISIONS.md). Contar como 0 rebaixaria pela metade a confiança de toda recuperação no alvo atual, medindo a falta de instrumentação do site em vez da qualidade do healing.
+⚠️ **Consequência para a etapa de score combinado:** `applicable: false` deve ser **excluído do cálculo**, nunca contado como match de confiança 0. Contar como 0 rebaixaria pela metade a confiança de toda recuperação no alvo atual, medindo a falta de instrumentação do site em vez da qualidade do healing.
 
 ## Heurística de similaridade estrutural (`heuristics/structuralHeuristic.ts`)
 
@@ -138,7 +136,7 @@ Candidatos abaixo de **0.25** são descartados como ruído — 0.25 é exatament
 
 - **`applicable` é `true` nos 134 fingerprints** — o inverso exato da heurística de atributos. No alvo atual é esta heurística que sustenta toda a recuperação.
 - **Sobrevive à reescrita de `class` e `id`** em página real, que é a tese central do trabalho nesta heurística.
-- **A discriminação morre dentro de containers repetidos.** Elementos a dois ou mais níveis abaixo do container que se repete são estruturalmente idênticos entre si: os 20 `h3` de uma listagem têm todos pai `article` no índice 0, irmão 2, profundidade 9 — o índice que separa os cards está no `<li>`, que é o **avô**, e o fingerprint guarda só um nível de ancestral. Nesses casos o resultado vem com `ambiguous: true` e o `candidateCount` real. O elemento devolvido é o correto, mas por convenção (captura usa `.first()`, desempate é ordem do documento), não por evidência estrutural. Ver [ADR-010](DECISIONS.md).
+- **A discriminação morre dentro de containers repetidos.** Elementos a dois ou mais níveis abaixo do container que se repete são estruturalmente idênticos entre si: os 20 `h3` de uma listagem têm todos pai `article` no índice 0, irmão 2, profundidade 9 — o índice que separa os cards está no `<li>`, que é o **avô**, e o fingerprint guarda só um nível de ancestral. Nesses casos o resultado vem com `ambiguous: true` e o `candidateCount` real. O elemento devolvido é o correto, mas por convenção (captura usa `.first()`, desempate é ordem do documento), não por evidência estrutural.
 
 O `article` em si não sofre desse problema: o pai dele *é* o `<li>` cujo índice varia.
 
@@ -149,7 +147,7 @@ Duas classes de caso em que a similaridade estrutural é insuficiente **por prin
 1. **Geometria idêntica.** Elementos dentro de containers repetidos são estruturalmente indistinguíveis por definição. Resultado: `ambiguous: true` com score alto.
 2. **Reordenação.** Medido no alvo real: invertendo a ordem dos cards, o fingerprint de `role=article` devolve o livro errado com **score 1.0 e `ambiguous: false`** — o `<li>` de índice 0 continua existindo, só que contém outro produto. Não há ambiguidade a sinalizar porque o match é único; está apenas errado. Nenhum sinal posicional distingue "o elemento se moveu" de "outro ocupou o lugar dele".
 
-Os dois casos continuam travados em testes de caracterização em `integration/structuralHeuristic.spec.ts`: eles fixam o comportamento da heurística **isolada**, que não mudou e não deve mudar — o limite é dela. O que a combinação acrescenta é a segunda metade da evidência: o mesmo cenário de reordenação, atravessando `decision/confidenceScore.ts`, agora é rebaixado e recusado em `integration/confidenceScore.spec.ts`. Ver [ADR-011](DECISIONS.md), [ADR-012](DECISIONS.md) e, para como as restrições foram implementadas, [ADR-014](DECISIONS.md).
+Os dois casos continuam travados em testes de caracterização em `integration/structuralHeuristic.spec.ts`: eles fixam o comportamento da heurística **isolada**, que não mudou e não deve mudar — o limite é dela. O que a combinação acrescenta é a segunda metade da evidência: o mesmo cenário de reordenação, atravessando `decision/confidenceScore.ts`, agora é rebaixado e recusado em `integration/confidenceScore.spec.ts`.
 
 ## Score de confiança (`decision/confidenceScore.ts`)
 
@@ -157,12 +155,12 @@ Os dois casos continuam travados em testes de caracterização em `integration/s
 
 Quatro passos, nesta ordem:
 
-| Passo | Regra | Efeito |
-|---|---|---|
-| 1 · Aplicabilidade | `applicable: false` sai do cálculo; nenhuma aplicável → `score: null` | ADR-007 |
-| 2 · Combinação | Maior score entre as que acharam candidato; elementos divergentes aplicam ×0.5 | ADR-013 |
-| 3 · Ambiguidade | `ambiguous: true` não resolvido aplica ×0.5 sobre o combinado | ADR-011, ADR-015 |
-| 4 · Corroboração por texto | Fator em [0.5, 1.0] pela similaridade de token entre `fingerprint.text` e o texto do candidato | ADR-012, ADR-014 |
+| Passo | Regra |
+|---|---|
+| 1 · Aplicabilidade | `applicable: false` sai do cálculo; nenhuma aplicável → `score: null` |
+| 2 · Combinação | Maior score entre as que acharam candidato; elementos divergentes aplicam ×0.5 |
+| 3 · Ambiguidade | `ambiguous: true` não resolvido aplica ×0.5 sobre o combinado |
+| 4 · Corroboração por texto | Fator em [0.5, 1.0] pela similaridade de token entre `fingerprint.text` e o texto do candidato |
 
 `score: null` é **"sem confiança"**, não zero: zero afirmaria que se mediu e não se achou nada. O tipo obriga todo chamador a tratar os dois casos à parte. `reason` distingue `no-applicable-heuristic` de `no-candidate-found`, e `flags` registra cada caso especial que participou do cálculo — é o que o log de auditoria da Camada 4 carrega.
 
@@ -172,7 +170,7 @@ A corroboração por texto é o **único sinal do mecanismo independente de posi
 
 `decide(fingerprint, confidence, options?)` devolve `replace` ou `fail`, sempre registrando a decisão.
 
-- **Limiar:** `CONFIDENCE_THRESHOLD = 0.7`, inclusivo, sobrescrevível por chamada. **Valor provisório** — a etapa de experimentos vai calibrá-lo, e ele não deve ser citado como validado (ADR-016).
+- **Limiar:** `CONFIDENCE_THRESHOLD = 0.7`, inclusivo, sobrescrevível por chamada. **Valor provisório** — a etapa de experimentos vai calibrá-lo, e ele não deve ser citado como validado.
 - **Acima:** substitui e devolve o candidato; a entrada de log tem página, seletor original, descrição do candidato, score, limiar vigente, heurísticas contribuintes, flags e o timestamp da **decisão**.
 - **Abaixo, incluindo "sem confiança":** falha sem recuperação e **não** devolve o candidato. Falhar visivelmente é melhor que mascarar defeito real com um falso positivo silencioso.
 - O log registra as **duas** decisões: sem as falhas não há denominador para calcular taxa de recuperação nos experimentos.
@@ -185,10 +183,10 @@ A corroboração por texto é o **único sinal do mecanismo independente de posi
 | `class` e `id` reescritos em página real | 1.00 | substitui |
 | Edição leve de conteúdo (1 token distinto em 9) | 0.875 | substitui |
 | Elemento em estrutura repetida (20 candidatos) | 0.50 | **falha** |
-| Reordenação de cards (ADR-012) | 0.50 | **falha** |
+| Reordenação de cards | 0.50 | **falha** |
 | Reordenação + estrutura repetida | 0.25 | **falha** |
 
-Duas leituras que valem para o texto do trabalho: no alvo avaliado **só elementos de geometria discriminante são curáveis sem revisão humana** — acertar por ordem do documento não conta como evidência (ADR-015) — e, como a heurística de atributos é inaplicável aqui (ADR-006), **o caminho de divergência entre heurísticas nunca é exercitado sob dados reais** (ADR-013).
+Duas leituras que valem para o texto do trabalho: no alvo avaliado **só elementos de geometria discriminante são curáveis sem revisão humana** — acertar por ordem do documento não conta como evidência — e, como a heurística de atributos é inaplicável aqui, **o caminho de divergência entre heurísticas nunca é exercitado sob dados reais**.
 
 ## Estado atual
 

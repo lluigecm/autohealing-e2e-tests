@@ -6,7 +6,7 @@ import { MUTATION_METADATA, MutationType } from '../../mutation/types';
 /**
  * Unitários da ferramenta de mutação. Moram sob `healing/` só porque o
  * `testDir` de `playwright.unit.config.ts` é `./healing` e as configs não podem
- * mudar nesta etapa — o código testado fica em `/mutation` (ADR-018).
+ * mudar nesta etapa — o código testado fica em `/mutation`.
  */
 
 function entriesOf(type: MutationType) {
@@ -75,7 +75,7 @@ test('M2 só em links: Travel, Sequential Art (edição leve), T3 (relabel e edi
   ]);
 });
 
-test('totais por tipo citados no ADR-018', () => {
+test('totais por tipo do catálogo', () => {
   const totals = Object.fromEntries(
     Object.entries(MUTATION_METADATA).map(([type, meta]) => [meta.code, entriesOf(type as MutationType).length]),
   );

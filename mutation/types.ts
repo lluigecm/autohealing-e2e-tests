@@ -14,7 +14,7 @@ export type MutationType =
   | 'remove-element';
 
 export interface MutationMetadata {
-  /** Código curto usado no texto do TCC e nos ADRs. */
+  /** Código curto usado no texto do TCC. */
   code: 'M1' | 'M2' | 'M3' | 'M4' | 'M5';
   /**
    * `cosmetic`: o alvo continua existindo e a recuperação deve relocalizá-lo.
@@ -22,7 +22,7 @@ export interface MutationMetadata {
    */
   class: 'cosmetic' | 'defect';
   /**
-   * Exigido pelo ADR-012: a taxa de falso positivo é reportada separando as
+   * A taxa de falso positivo é reportada separando as
    * mutações que alteram a ordem dos irmãos das que a preservam.
    */
   preservesOrder: boolean;
@@ -98,7 +98,7 @@ export const MUTATION_STATE_KEY = '__mutation';
 /**
  * Oráculo do alvo, guardado como propriedade JavaScript de `window` — nunca
  * como atributo: um `data-*`/`aria-*` no DOM contaminaria a heurística de
- * atributos estáveis (ADR-006/007).
+ * atributos estáveis.
  *
  * `applied: false` significa que nada foi transformado: o alvo não existe na
  * página (ex: o link "Travel" na própria página Travel), o grupo do M3 não o

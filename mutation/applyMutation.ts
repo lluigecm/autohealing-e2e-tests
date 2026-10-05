@@ -32,7 +32,7 @@ export function planOf(spec: MutationSpec): MutationPlan {
  *
  * Sempre define `window[stateKey]`, mesmo quando não transforma nada: o harness
  * distingue "não aplicou" (`applied: false`) de "removeu o alvo" (`oracle: null`).
- * Nunca escreve `data-*`/`aria-*` (ADR-018).
+ * Nunca escreve `data-*`/`aria-*`.
  */
 export function mutateDocument(plan: MutationPlan): void {
   const state: { id: string; applied: boolean; oracle: Element | null } = {
