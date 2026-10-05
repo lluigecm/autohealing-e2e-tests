@@ -24,8 +24,8 @@ Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte 
 
 ```bash
 npm test               # 66 testes E2E (playwright.config.ts) — regressão funcional da suíte baseline
-npm run test:unit      # 53 testes unitários (playwright.unit.config.ts) — lógica do mecanismo, zero rede
-npm run test:integration  # 15 testes de integração (playwright.integration.config.ts) — mecanismo contra o alvo real
+npm run test:unit      # 84 testes unitários (playwright.unit.config.ts) — lógica do mecanismo, zero rede
+npm run test:integration  # 17 testes de integração (playwright.integration.config.ts) — mecanismo contra o alvo real
 ```
 
 São **três números com propósitos distintos e não devem ser somados num total só**: a suíte E2E mede regressão funcional, os unitários validam a lógica do mecanismo sem tocar a rede (DOM via `page.setContent()`), e os de integração provam que o mecanismo funciona no site avaliado. Só a terceira categoria depende de rede, e é a única com `retries` — uma instabilidade de rede não deve ser lida como falha de heurística.
@@ -113,7 +113,7 @@ O score é **local a esta heurística**, não o score de confiança combinado da
 
 ### Limitação relevante para o experimento
 
-`applicable: false` marca o fingerprint sem nenhum atributo estável — a heurística não chegou a rodar, o que é diferente de ter rodado e não achado nada. **Os 134 fingerprints do baseline caem todos nesse caso**: books.toscrape.com não usa `data-*` nem `aria-*` em elemento nenhum. Na prática, a recuperação no site alvo vai depender inteiramente da similaridade estrutural; esta heurística está validada por fixtures e fica pronta para alvos que tenham esses atributos. Isso é resultado a reportar no TCC, não defeito da implementação.
+`applicable: false` marca o fingerprint sem nenhum atributo estável — a heurística não chegou a rodar, o que é diferente de ter rodado e não achado nada. **Os 134 fingerprints do baseline caem todos nesse caso**: nenhum dos elementos que a suíte exercita tem `data-*` ou `aria-*`. Os poucos que existem no site (ex.: `data-loading-text="Adding..."`, repetido com o mesmo valor em todos os botões "Add to basket") ficam fora desses elementos e, de todo modo, não identificariam um elemento específico. Na prática, a recuperação no site alvo vai depender inteiramente da similaridade estrutural; esta heurística está validada por fixtures e fica pronta para alvos que tenham esses atributos. Isso é resultado a reportar no TCC, não defeito da implementação.
 
 ⚠️ **Consequência para a etapa de score combinado:** `applicable: false` deve ser **excluído do cálculo**, nunca contado como match de confiança 0. Contar como 0 rebaixaria pela metade a confiança de toda recuperação no alvo atual, medindo a falta de instrumentação do site em vez da qualidade do healing.
 

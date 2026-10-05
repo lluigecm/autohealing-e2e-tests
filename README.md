@@ -19,7 +19,7 @@ As duas heurísticas são combinadas em um **score de confiança**: acima de um 
 
 - [Playwright](https://playwright.dev/) + TypeScript
 - Arquitetura **Page Object Model (POM)**
-- Persistência leve de fingerprints (JSON ou SQLite)
+- Persistência leve de fingerprints em JSON (um arquivo por elemento)
 - Sem dependências de ML — as heurísticas são baseadas em regras, não em modelos treinados
 
 ## Aplicação alvo
@@ -38,18 +38,22 @@ Os testes são executados contra [books.toscrape.com](https://books.toscrape.com
 
 ## Metodologia de avaliação
 
-Os experimentos comparam a execução da suíte de testes com e sob as mesmas mutações controladas, com e sem o mecanismo de auto-healing habilitado, coletando três métricas principais:
+Os experimentos comparam a execução da suíte de testes sob as mesmas mutações controladas, com e sem o mecanismo de auto-healing habilitado, coletando três métricas principais:
 
-- **Taxa de recuperação** — % de testes que continuam passando corretamente após a mutação.
-- **Taxa de falso positivo** — % de casos em que o mecanismo "recupera" um teste que deveria de fato falhar, indicando um defeito real na aplicação.
+- **Taxa de recuperação** — entre as mutações cosméticas que quebram o seletor original, a fração em que o mecanismo recupera o elemento correto.
+- **Taxa de falso positivo** — entre as mutações que removem o elemento-alvo (defeito real) e quebram o seletor original, a fração em que o mecanismo substitui o seletor em vez de deixar o teste falhar.
 - **Overhead de execução** — tempo extra introduzido pela tentativa de recuperação.
+
+Como os denominadores são pequenos, as taxas são reportadas como fração absoluta (ex.: 3/6), com uma linha por caso, e não apenas como percentual.
 
 ## Como rodar
 
 ```bash
 npm install
 npx playwright install chromium
-npx playwright test
+npm test                  # 66 testes E2E (suíte baseline)
+npm run test:unit         # testes unitários do mecanismo, sem rede
+npm run test:integration  # testes de integração contra o site real
 ```
 
 ## Escopo

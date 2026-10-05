@@ -11,7 +11,8 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * As heurísticas precisam de um DOM real para consultar, então há um projeto
  * chromium aqui. O DOM vem de `page.setContent()` com fixtures locais, nunca da
- * rede: books.toscrape.com não tem nenhum `data-*`/`aria-*`, e um teste unitário
+ * rede: nenhum elemento que a suíte exercita no books.toscrape.com tem
+ * `data-*`/`aria-*`, e um teste unitário
  * que dependesse de site externo deixaria de ser determinístico.
  * Sem `baseURL` de propósito — nenhum teste daqui deve navegar para fora.
  */

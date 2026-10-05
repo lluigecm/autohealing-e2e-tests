@@ -74,7 +74,7 @@ test.describe('página íntegra', () => {
 
     const confidence = await confidenceFor(page, fingerprint);
 
-    // Consequência direta da restrição 1: sem `data-*`/`aria-*` no alvo, a
+    // Consequência direta da restrição 1: sem `data-*`/`aria-*` nos elementos exercitados, a
     // heurística de atributos não entra no cálculo — e a estrutural sustenta
     // sozinha toda a recuperação.
     expect(confidence.contributingHeuristics.map((item) => item.heuristic)).toEqual([
