@@ -55,6 +55,28 @@ await pointsToOracle(algumLocator);                   // o locator aponta para o
 | `catalog.ts` | Alvos e as 103 entradas do catálogo |
 | `applyMutation.ts` | Transformação (`mutateDocument`), instalação via `addInitScript` e leitura do oráculo |
 | `effectiveness-matrix.json` | Matriz de efetividade medida no alvo real. **Gerado — não editar à mão** |
+| `targetTestMap.ts`, `targetTestMapReporter.ts`, `targetTestMap.config.ts` | Geração do mapa teste → método de Page Object → locator → alvo |
+| `target-test-map.json` | Mapa de rastreabilidade dos 66 testes aos alvos T1–T10. **Gerado — não editar à mão** |
+
+## Mapa teste → alvo
+
+`target-test-map.json` sai da **execução real** dos 66 testes de `tests/`, sem alterar nenhum deles. O config dedicado troca `withCapture` por uma versão que, antes de cada ação, registra o método do Page Object, a linha do spec e o locator. Também pergunta ao DOM quais alvos do catálogo esse locator resolve ou atravessa. O alvo é identificado pelo seletor CSS do catálogo, avaliado na página em que a chamada acontece. A captura de fingerprints fica desligada durante a execução.
+
+Cada alvo é contado em três definições de "o teste exercita o alvo":
+
+- **A**: algum locator do teste resolve o alvo ou passa por ele (o alvo é ancestral do elemento resolvido), inclusive por locator de coleção;
+- **A sem coleção**: o mesmo que A, sem os locators de coleção (`role=article` para contagem, títulos dos cards);
+- **B**: algum locator do teste resolve exatamente o alvo e só ele, ou seja, a asserção ou a ação recai sobre o próprio alvo.
+
+Um par (método, locator) é de coleção quando resolve mais de um elemento em alguma chamada da execução. Isso vale para todas as suas chamadas, inclusive em Crime, a categoria de um livro só.
+
+O reporter só grava o arquivo se os 66 testes passarem, todos gerarem registro e cada um exercitar ao menos um alvo em A e em B. Para regerar:
+
+```bash
+TARGET_MAP_OUT=a.json npx playwright test --config=mutation/targetTestMap.config.ts
+TARGET_MAP_OUT=b.json npx playwright test --config=mutation/targetTestMap.config.ts
+diff a.json b.json && cp a.json mutation/target-test-map.json
+```
 
 ## Testes
 

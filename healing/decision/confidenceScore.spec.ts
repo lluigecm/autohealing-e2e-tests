@@ -356,6 +356,98 @@ test.describe('passo 4 — restrição 3', () => {
   });
 });
 
+test.describe('saída para o log de experimentos', () => {
+  test('as duas heurísticas aparecem, com applicable explícito e o próprio candidato', async ({
+    page,
+  }) => {
+    await page.setContent(LISTAGEM);
+
+    const result = await combineConfidence(
+      attributeResult({ applicable: true, matched: true, score: 0.9, locator: primeiroCard(page) }),
+      structuralResult({ matched: true, score: 0.8, locator: segundoCard(page) }),
+      fingerprint(),
+    );
+
+    expect(result.heuristics.map((h) => [h.heuristic, h.applicable, h.score])).toEqual([
+      ['stable-attributes', true, 0.9],
+      ['structural-similarity', true, 0.8],
+    ]);
+    // Candidatos distintos: é o que torna a divergência reconstituível a partir do log.
+    expect(result.heuristics[0].candidate).toContain('nth-child(1)');
+    expect(result.heuristics[1].candidate).toContain('nth-child(2)');
+    expect(result.factors!.disagreement).toBe(DISAGREEMENT_FACTOR);
+  });
+
+  test('inaplicável aparece com applicable: false, sem entrar no cálculo', async ({ page }) => {
+    await page.setContent(LISTAGEM);
+
+    const result = await combineConfidence(
+      attributeResult({ applicable: false }),
+      structuralResult({ matched: true, score: 1, locator: primeiroCard(page) }),
+      fingerprint(),
+    );
+
+    expect(result.heuristics[0]).toMatchObject({ heuristic: 'stable-attributes', applicable: false, candidate: null });
+    expect(result.contributingHeuristics).toHaveLength(1);
+  });
+
+  test('score final é o bruto vezes os fatores aplicados', async ({ page }) => {
+    await page.setContent(LISTAGEM);
+
+    const result = await combineConfidence(
+      attributeResult({ applicable: false }),
+      structuralResult({
+        matched: true,
+        score: 0.9,
+        locator: segundoCard(page),
+        ambiguous: true,
+        candidateCount: 20,
+      }),
+      fingerprint(),
+    );
+
+    // A identidade que permite recalcular offline cada configuração da ablação.
+    const { disagreement, ambiguity, text } = result.factors!;
+    expect(result.rawScore).toBeCloseTo(0.9);
+    expect({ disagreement, ambiguity, text }).toEqual({
+      disagreement: 1,
+      ambiguity: AMBIGUITY_FACTOR,
+      text: TEXT_FLOOR_FACTOR,
+    });
+    expect(result.score).toBeCloseTo(result.rawScore! * disagreement * ambiguity * text);
+  });
+
+  test('textSimilarity é a medida antes do piso, não o fator', async ({ page }) => {
+    await page.setContent(LISTAGEM);
+
+    const result = await combineConfidence(
+      attributeResult({ applicable: false }),
+      structuralResult({ matched: true, score: 1, locator: segundoCard(page) }),
+      fingerprint(),
+    );
+
+    expect(result.factors!.text).toBe(TEXT_FLOOR_FACTOR);
+    expect(result.textSimilarity!).toBeLessThan(TEXT_FLOOR_FACTOR);
+    expect(result.textSimilarity).toBeCloseTo(
+      textSimilarity(TEXTO_PRIMEIRO_CARD, 'Ways of Seeing £16.21 In stock Add to basket'),
+    );
+  });
+
+  test('sem candidato, bruto e fatores são null junto com o score', async ({ page }) => {
+    await page.setContent(LISTAGEM);
+
+    const result = await combineConfidence(
+      attributeResult({ applicable: false }),
+      structuralResult({ matched: false }),
+      fingerprint(),
+    );
+
+    expect(result.rawScore).toBeNull();
+    expect(result.factors).toBeNull();
+    expect(result.heuristics).toHaveLength(2);
+  });
+});
+
 test.describe('instrumentos de medida', () => {
   test('a similaridade de token é simétrica e normalizada', () => {
     expect(textSimilarity('In Her Wake', 'in her wake')).toBeCloseTo(1);

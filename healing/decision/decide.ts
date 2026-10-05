@@ -1,9 +1,11 @@
 import { Locator } from '@playwright/test';
 import { Fingerprint } from '../fingerprint';
 import {
+  ConfidenceFactors,
   ConfidenceFlag,
   ConfidenceResult,
   HeuristicContribution,
+  HeuristicOutput,
   NoConfidenceReason,
 } from './confidenceScore';
 
@@ -61,6 +63,47 @@ export interface HealingLogEntry {
   reason: NoConfidenceReason | null;
   /** Momento da **decisão**, não da captura do fingerprint. */
   decidedAt: string;
+  /** Maior score local entre as heurísticas com candidato, antes dos fatores. */
+  rawScore: number | null;
+  /** Fatores aplicados sobre `rawScore` (1 = não descontou); base da ablação offline. */
+  factors: ConfidenceFactors | null;
+  /** Similaridade de texto antes do piso de corroboração. */
+  textSimilarity: number | null;
+  /** As duas heurísticas, aplicáveis ou não, cada uma com o próprio candidato. */
+  heuristics: HeuristicOutput[];
+  /**
+   * O candidato (do `ConfidenceResult`, inclusive quando a decisão é `fail`) é o
+   * elemento-oráculo da mutação. `null` quando não houve candidato ou quando a
+   * decisão não passou pelo harness de experimentos (`recovery.ts`).
+   */
+  candidateIsOracle: boolean | null;
+  /** Identificação da execução; `null` fora do harness de experimentos. */
+  run: RunContext | null;
+  /** Tempos medidos; `null` fora do harness de experimentos. */
+  timings: RecoveryTimings | null;
+}
+
+/** Condição experimental: com o mecanismo de recuperação ligado ou desligado. */
+export type HealingCondition = 'healing-on' | 'healing-off';
+
+export interface RunContext {
+  /** Entrada do catálogo de mutações (ex.: `M3-T2`). */
+  entryId: string;
+  /** Teste da suíte baseline exercitado. */
+  testId: string;
+  /** Índice da repetição, a partir de 1. */
+  repetition: number;
+  condition: HealingCondition;
+}
+
+/** Em milissegundos, por `performance.now()` (monotônico). */
+export interface RecoveryTimings {
+  /** Espera até a detecção declarar o locator quebrado. Fornecido pela detecção. */
+  detectionWaitMs: number;
+  /** t_rec: heurísticas + combinação + decisão. Não inclui oráculo nem escrita do log. */
+  recoveryMs: number;
+  /** Duração da ação executada com o candidato; `null` quando a decisão foi `fail`. */
+  actionMs: number | null;
 }
 
 export interface HealingDecision {
@@ -146,6 +189,13 @@ export function decide(
     flags: confidence.flags,
     reason: confidence.reason,
     decidedAt: now().toISOString(),
+    rawScore: confidence.rawScore,
+    factors: confidence.factors,
+    textSimilarity: confidence.textSimilarity,
+    heuristics: confidence.heuristics,
+    candidateIsOracle: null,
+    run: null,
+    timings: null,
   };
   record(entry);
 

@@ -43,6 +43,28 @@ function confidence(overrides: Partial<ConfidenceResult> = {}): ConfidenceResult
     flags: [],
     reason: null,
     textSimilarity: 1,
+    rawScore: 1,
+    factors: { disagreement: 1, ambiguity: 1, text: 1 },
+    heuristics: [
+      {
+        heuristic: 'stable-attributes',
+        applicable: false,
+        matched: false,
+        score: 0,
+        ambiguous: false,
+        candidateCount: 0,
+        candidate: null,
+      },
+      {
+        heuristic: 'structural-similarity',
+        applicable: true,
+        matched: true,
+        score: 1,
+        ambiguous: false,
+        candidateCount: 1,
+        candidate: "locator('li:nth-child(1) article')",
+      },
+    ],
     ...overrides,
   };
 }
@@ -134,6 +156,34 @@ test.describe('log estruturado', () => {
     expect(entry.flags).toEqual(['heuristics-agree']);
     // Timestamp da decisão, não do fingerprint.
     expect(entry.decidedAt).toBe('2026-10-02T12:00:00.000Z');
+  });
+
+  test('a entrada carrega o que a ablação offline precisa', async ({ page }) => {
+    const locator = await candidato(page);
+
+    const { entry } = decide(
+      fingerprint(),
+      confidence({
+        score: 0.25,
+        locator,
+        rawScore: 1,
+        factors: { disagreement: 1, ambiguity: 0.5, text: 0.5 },
+        textSimilarity: 0.3,
+      }),
+      options,
+    );
+
+    expect(entry.rawScore).toBe(1);
+    expect(entry.factors).toEqual({ disagreement: 1, ambiguity: 0.5, text: 0.5 });
+    expect(entry.textSimilarity).toBe(0.3);
+    expect(entry.heuristics.map((h) => [h.heuristic, h.applicable])).toEqual([
+      ['stable-attributes', false],
+      ['structural-similarity', true],
+    ]);
+    // Só o harness de experimentos preenche estes: `decide` sozinho não mede nem tem oráculo.
+    expect(entry.candidateIsOracle).toBeNull();
+    expect(entry.run).toBeNull();
+    expect(entry.timings).toBeNull();
   });
 
   test('a falha também é registrada, porque sem ela não há denominador', async ({ page }) => {

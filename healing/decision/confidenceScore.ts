@@ -54,6 +54,35 @@ export interface HeuristicContribution {
   candidateCount: number;
 }
 
+/**
+ * Saída de uma heurística como ela saiu, aplicável ou não, para o log de
+ * experimentos. Diferente de `HeuristicContribution`, aqui a inaplicável aparece
+ * com `applicable: false` explícito, e cada uma traz o próprio candidato. Sem
+ * isso, divergência e ablação não são reconstituíveis a partir do log.
+ */
+export interface HeuristicOutput {
+  heuristic: HeuristicName;
+  applicable: boolean;
+  matched: boolean;
+  /** Score local, antes de qualquer desconto desta função. */
+  score: number;
+  ambiguous: boolean;
+  candidateCount: number;
+  /** Descrição do candidato desta heurística (`String(locator)`), ou `null`. */
+  candidate: string | null;
+}
+
+/**
+ * Multiplicadores efetivamente aplicados sobre `rawScore`, 1 quando o passo não
+ * descontou. `score === rawScore * disagreement * ambiguity * text`, e é essa
+ * identidade que permite recalcular offline cada configuração da ablação.
+ */
+export interface ConfidenceFactors {
+  disagreement: number;
+  ambiguity: number;
+  text: number;
+}
+
 export interface ConfidenceResult {
   /**
    * Confiança combinada em [0, 1], ou `null` para "sem confiança" (restrição 4).
@@ -69,8 +98,17 @@ export interface ConfidenceResult {
   flags: ConfidenceFlag[];
   /** Preenchido apenas quando `score` é `null`. */
   reason: NoConfidenceReason | null;
-  /** Similaridade de texto medida, ou `null` quando não havia o que corroborar. */
+  /**
+   * Similaridade de texto medida, **antes** do piso de `textCorroborationFactor`,
+   * ou `null` quando não havia o que corroborar.
+   */
   textSimilarity: number | null;
+  /** Maior score local entre as heurísticas com candidato; `null` junto com `score`. */
+  rawScore: number | null;
+  /** `null` junto com `score`: sem candidato, nenhum passo de desconto rodou. */
+  factors: ConfidenceFactors | null;
+  /** As duas heurísticas, sempre, na ordem atributos → estrutural. */
+  heuristics: HeuristicOutput[];
 }
 
 /**
@@ -98,6 +136,7 @@ function noConfidence(
   reason: NoConfidenceReason,
   contributingHeuristics: HeuristicContribution[],
   flags: ConfidenceFlag[],
+  heuristics: HeuristicOutput[],
 ): ConfidenceResult {
   return {
     score: null,
@@ -106,6 +145,24 @@ function noConfidence(
     flags,
     reason,
     textSimilarity: null,
+    rawScore: null,
+    factors: null,
+    heuristics,
+  };
+}
+
+function output(
+  heuristic: HeuristicName,
+  result: AttributeMatchResult | StructuralMatchResult,
+): HeuristicOutput {
+  return {
+    heuristic,
+    applicable: result.applicable,
+    matched: result.matched,
+    score: result.score,
+    ambiguous: result.ambiguous,
+    candidateCount: result.candidateCount,
+    candidate: result.locator === null ? null : String(result.locator),
   };
 }
 
@@ -227,11 +284,15 @@ export async function combineConfidence(
 ): Promise<ConfidenceResult> {
   const applicable = participants(attribute, structural);
   const contributingHeuristics = applicable.map(contribution);
+  const heuristics = [
+    output('stable-attributes', attribute),
+    output('structural-similarity', structural),
+  ];
   const flags: ConfidenceFlag[] = [];
 
   // Passo 1 — restrição 1 e restrição 4.
   if (applicable.length === 0) {
-    return noConfidence('no-applicable-heuristic', contributingHeuristics, flags);
+    return noConfidence('no-applicable-heuristic', contributingHeuristics, flags, heuristics);
   }
 
   const matched = applicable.filter(
@@ -239,7 +300,7 @@ export async function combineConfidence(
       participant.matched && participant.locator !== null,
   );
   if (matched.length === 0) {
-    return noConfidence('no-candidate-found', contributingHeuristics, flags);
+    return noConfidence('no-candidate-found', contributingHeuristics, flags, heuristics);
   }
   if (matched.length < applicable.length) {
     // Não é contra-evidência: as heurísticas olham sinais disjuntos, e não achar
@@ -249,7 +310,8 @@ export async function combineConfidence(
 
   // Passo 2 — a evidência mais forte governa; a mais fraca não dilui.
   const [winner, runnerUp] = [...matched].sort((a, b) => b.score - a.score);
-  let score = winner.score;
+  const rawScore = winner.score;
+  const factors: ConfidenceFactors = { disagreement: 1, ambiguity: 1, text: 1 };
   let agreement = false;
 
   if (runnerUp !== undefined) {
@@ -258,7 +320,7 @@ export async function combineConfidence(
       flags.push('heuristics-agree');
     } else {
       flags.push('heuristics-disagree');
-      score *= DISAGREEMENT_FACTOR;
+      factors.disagreement = DISAGREEMENT_FACTOR;
     }
   }
 
@@ -273,7 +335,7 @@ export async function combineConfidence(
       flags.push('ambiguity-resolved-by-agreement');
     } else {
       flags.push('unresolved-ambiguity');
-      score *= AMBIGUITY_FACTOR;
+      factors.ambiguity = AMBIGUITY_FACTOR;
     }
   }
 
@@ -285,19 +347,21 @@ export async function combineConfidence(
     flags.push('text-corroboration-unavailable');
   } else {
     similarity = textSimilarity(fingerprint.text, await winner.locator.innerText());
-    const factor = textCorroborationFactor(similarity);
-    if (factor < 1) {
+    factors.text = textCorroborationFactor(similarity);
+    if (factors.text < 1) {
       flags.push('text-corroboration-divergent');
     }
-    score *= factor;
   }
 
   return {
-    score,
+    score: rawScore * factors.disagreement * factors.ambiguity * factors.text,
     locator: winner.locator,
     contributingHeuristics,
     flags,
     reason: null,
     textSimilarity: similarity,
+    rawScore,
+    factors,
+    heuristics,
   };
 }

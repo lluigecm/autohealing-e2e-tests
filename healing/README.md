@@ -18,6 +18,8 @@ Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte 
 | `decision/confidenceScore.spec.ts` | Testes unitários da combinação (resultados sintéticos, locators reais) |
 | `decision/decide.ts` | Limiar, decisão (substituir/falhar) e log estruturado (Camada 4) |
 | `decision/decide.spec.ts` | Testes unitários da decisão e do formato do log |
+| `decision/recovery.ts` | Tentativa de recuperação instrumentada para os experimentos: tempos, oráculo e sink JSONL |
+| `decision/recovery.spec.ts` | Testes unitários da tentativa instrumentada e do sink |
 | `../integration/` | Testes de integração das heurísticas e do score contra o alvo real |
 
 ## Testes
@@ -174,6 +176,26 @@ A corroboração por texto é o **único sinal do mecanismo independente de posi
 - **Acima:** substitui e devolve o candidato; a entrada de log tem página, seletor original, descrição do candidato, score, limiar vigente, heurísticas contribuintes, flags e o timestamp da **decisão**.
 - **Abaixo, incluindo "sem confiança":** falha sem recuperação e **não** devolve o candidato. Falhar visivelmente é melhor que mascarar defeito real com um falso positivo silencioso.
 - O log registra as **duas** decisões: sem as falhas não há denominador para calcular taxa de recuperação nos experimentos.
+
+### Log de experimentos (`decision/recovery.ts`)
+
+Além do que a revisão humana precisa, a entrada de log carrega o necessário para recalcular a decisão offline sob outra configuração do score (por exemplo, sem o fator de ambiguidade ou sem a corroboração por texto):
+
+- `rawScore`: maior score local entre as heurísticas com candidato, antes de qualquer fator;
+- `factors`: `{ disagreement, ambiguity, text }`, os multiplicadores aplicados (1 quando o passo não descontou). Vale `score = rawScore × disagreement × ambiguity × text`;
+- `textSimilarity`: a similaridade medida, antes do piso do fator de texto;
+- `heuristics`: as duas heurísticas, com `applicable` explícito e o candidato de cada uma;
+- `candidateIsOracle`: se o candidato é o elemento-oráculo da mutação. É avaliado também quando a decisão é `fail`, porque é isso que diz se outra configuração teria substituído pelo elemento certo ou pelo errado;
+- `run`: `entryId`, `testId`, `repetition` e `condition` (`healing-on`/`healing-off`);
+- `timings`: `detectionWaitMs`, `recoveryMs` (t_rec) e `actionMs`, em milissegundos monotônicos.
+
+`decide()` sozinho deixa `candidateIsOracle`, `run` e `timings` em `null`. Quem os preenche é o fluxo de `recovery.ts`:
+
+1. `attemptRecovery(page, fingerprint, { oracle })` mede t_rec, que cobre heurísticas, combinação e decisão. O oráculo é consultado depois dessa janela e antes da ação, porque a ação pode navegar. É injetado pelo harness (`pointsToOracle`): a camada de healing não depende da ferramenta de mutação.
+2. `timeRecoveredAction(attempt, action)` cronometra a ação com o candidato, só quando a decisão foi `replace`. Um erro da ação é devolvido, não lançado, para que a entrada seja gravada mesmo assim.
+3. `completeEntry(attempt, run, { detectionWaitMs, actionMs })` monta a entrada, e `jsonlSink(arquivo).write(entrada)` a acrescenta ao arquivo. O sink só escreve, nunca lê, e é chamado depois da ação, fora de qualquer janela medida.
+
+A espera da detecção vem de quem chama, porque a detecção (Camada 2) ainda não existe.
 
 ### O que o score mostrou no alvo real
 
