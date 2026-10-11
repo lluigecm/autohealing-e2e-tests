@@ -6,6 +6,8 @@ Atualizado a cada etapa, junto com o código da etapa. Entradas antigas não sã
 
 Formato de cada entrada: **Contexto** · **Decisão** · **Alternativas consideradas** · **Consequência**.
 
+**Sobre o histórico.** Até 2026-10-11 este arquivo era mantido só localmente. As datas das entradas anteriores a isso são as registradas na hora da escrita, e o histórico do git não as comprova. Algumas entradas comparam o resultado com a **especificação inicial da etapa**, um documento de planejamento que não é versionado. Nesses casos, o trecho relevante aparece parafraseado na própria entrada.
+
 ---
 
 ## ADR-001 — Escada de priorização com teto de confiança por estratégia
@@ -74,7 +76,7 @@ Formato de cada entrada: **Contexto** · **Decisão** · **Alternativas consider
 
 **Alternativas consideradas.** (a) Navegar até as páginas reais de books.toscrape.com — descartado: não exercitaria nenhuma das três prioridades, já que o site não tem `data-*`/`aria-*`, e tornaria o resultado dependente de rede. (b) Mockar o `Page` do Playwright — descartado: validaria o mock, não o comportamento dos seletores CSS contra um DOM de verdade.
 
-**Consequência.** Os cenários das seções 4 e 5 do documento de contexto ficam todos cobertos e determinísticos (17 testes unitários, sem rede). O custo é que a heurística ainda não foi exercitada contra HTML de produção — o que só vai acontecer quando o alvo dos experimentos oferecer atributos estáveis.
+**Consequência.** Os cenários previstos na especificação inicial da etapa ficam todos cobertos e determinísticos (17 testes unitários, sem rede). O custo é que a heurística ainda não foi exercitada contra HTML de produção — o que só vai acontecer quando o alvo dos experimentos oferecer atributos estáveis.
 
 ---
 
@@ -102,7 +104,7 @@ Formato de cada entrada: **Contexto** · **Decisão** · **Alternativas consider
 
 **Alternativas consideradas.** Contabilizar `applicable: false` como score 0 — descartado: numa média de duas heurísticas, rebaixaria pela metade a confiança de *toda* recuperação no alvo atual, mesmo quando a similaridade estrutural sozinha tivesse confiança alta. O número resultante mediria a ausência de instrumentação do site, não a qualidade da recuperação, e distorceria a camada de decisão para recusar healings corretos.
 
-**Consequência.** Distinguir "não se aplica" de "aplicou-se e falhou" deixa de ser um detalhe de schema e vira requisito aritmético da combinação — é o que justifica o campo `applicable` do ADR-004 existir separado de `matched`. A restrição precisa constar explicitamente no documento de contexto da etapa de score de confiança, quando ele for escrito, e o cálculo tem de prever o caso-limite de *nenhuma* heurística aplicável (que é resultado sem confiança, não confiança zero).
+**Consequência.** Distinguir "não se aplica" de "aplicou-se e falhou" deixa de ser um detalhe de schema e vira requisito aritmético da combinação — é o que justifica o campo `applicable` do ADR-004 existir separado de `matched`. A restrição precisa constar explicitamente na especificação da etapa de score de confiança, e o cálculo tem de prever o caso-limite de *nenhuma* heurística aplicável (que é resultado sem confiança, não confiança zero).
 
 ---
 
@@ -110,7 +112,7 @@ Formato de cada entrada: **Contexto** · **Decisão** · **Alternativas consider
 
 **Data:** 2026-09-20 · **Etapa:** Camada 3, parte 2/2 (similaridade estrutural) · **Status:** aceito
 
-**Contexto.** A heurística estrutural compara posição na árvore: pai, índice entre irmãos, profundidade e tag. Diferente dos atributos, esses sinais raramente são tudo-ou-nada — uma mutação que insere um wrapper desloca a profundidade em 1 sem invalidar o resto, e a seção 4.3 do contexto exige devolver candidato com score reduzido em vez de descartar.
+**Contexto.** A heurística estrutural compara posição na árvore: pai, índice entre irmãos, profundidade e tag. Diferente dos atributos, esses sinais raramente são tudo-ou-nada — uma mutação que insere um wrapper desloca a profundidade em 1 sem invalidar o resto, e a especificação inicial da etapa exige devolver candidato com score reduzido em vez de descartar.
 
 **Decisão.** Score é a soma de quatro pesos que totalizam 1.0: pai 0.45, irmão 0.30, profundidade 0.15, tag 0.10. Irmão e profundidade decaem linearmente com a distância (zeram em 4 e 2 posições); pai com a tag certa mas em outro índice vale metade do peso, por ser o mesmo tipo de container e não o mesmo container. Abaixo de 0.25 o candidato é descartado como ruído — 0.25 é exatamente `profundidade + tag`, o critério 2 no seu mínimo.
 
@@ -241,7 +243,7 @@ O caso **discriminante** — o que o ADR-010 classificou como o bom — devolve 
 
 **Justificativa do valor.** 0.7 fica na margem entre os casos conhecidos, todos medidos: recuperação legítima sob reescrita de `class`/`id` em página real chega a **1.00**; edição leve de conteúdo (um token distinto em nove) a **0.875**; ambiguidade não resolvida a **0.50**; falso positivo por reordenação a **0.50**. A folga é de 0.175 para baixo e 0.20 para cima.
 
-**Alternativas consideradas.** (a) Fixar o limiar como constante não sobrescrevível — descartado: tornaria a varredura do item 7 do TODO uma edição de código por valor testado. (b) Registrar só as substituições, como a seção 5 do documento de contexto sugeria — descartado: sem as decisões de falha o harness de experimento não tem denominador, e nenhuma taxa de recuperação é calculável.
+**Alternativas consideradas.** (a) Fixar o limiar como constante não sobrescrevível — descartado: tornaria a varredura de limiares dos experimentos uma edição de código por valor testado. (b) Registrar só as substituições, como a especificação inicial da etapa sugeria — descartado: sem as decisões de falha o harness de experimento não tem denominador, e nenhuma taxa de recuperação é calculável.
 
 **Consequência.** O limiar é o parâmetro mais exposto do mecanismo e o único cuja escolha ainda é argumentativa — **não deve ser citado no texto como valor validado**. As margens acima vêm de quatro cenários num alvo, não de uma distribuição: os experimentos de mutação podem revelar uma faixa de scores entre 0.5 e 0.9 que hoje não se observa, e aí o valor entra em ADR novo. A camada ainda não é acionada por falha real de locator (Camada 2 não implementada): é alimentada diretamente com um `ConfidenceResult`, o que a torna testável isoladamente mas deixa a integração final fora desta etapa.
 
@@ -255,7 +257,7 @@ O caso **discriminante** — o que o ADR-010 classificou como o bom — devolve 
 
 **Decisão.** Guarda no topo de `persistFingerprint`: com `HEALING_CAPTURE` exatamente igual a `off`, a função retorna sem gravar e sem emitir o aviso de extração nula. A variável é lida a cada chamada, não no carregamento do módulo, para que um spec possa defini-la no próprio arquivo — as três configs do Playwright não podem mudar, e `VAR=x npm …` não funciona no PowerShell sem dependência nova (`cross-env`). Extração, ordem extrair → agir → persistir e assinatura de `withCapture` ficam intactas. Qualquer outro valor, inclusive ausência, mantém o comportamento anterior.
 
-**Alternativas consideradas.** (a) Guarda em `saveFingerprint` (`fingerprintStore.ts`) — descartado: o documento da etapa fixa a mudança em `persist`, e o store é a primitiva de I/O; a política de *quando* gravar já mora em `persistFingerprint` (é ali que se decide pular o `null`), então o interruptor pertence ao mesmo lugar. (b) Pular também a extração quando desligado — economizaria até 5 s por locator quebrado, mas mudaria o caminho de execução de `withCapture` sob experimento em relação ao baseline, contaminando a medição de overhead do item 7. (c) Apontar `HEALING_FINGERPRINTS_DIR` para um diretório temporário durante os experimentos — descartado: a gravação continuaria acontecendo, e a Camada 2 futura leria desse diretório fingerprints mutados em vez do baseline.
+**Alternativas consideradas.** (a) Guarda em `saveFingerprint` (`fingerprintStore.ts`) — descartado: a especificação inicial da etapa fixa a mudança em `persist`, e o store é a primitiva de I/O; a política de *quando* gravar já mora em `persistFingerprint` (é ali que se decide pular o `null`), então o interruptor pertence ao mesmo lugar. (b) Pular também a extração quando desligado — economizaria até 5 s por locator quebrado, mas mudaria o caminho de execução de `withCapture` sob experimento em relação ao baseline, contaminando a medição de overhead do item 7. (c) Apontar `HEALING_FINGERPRINTS_DIR` para um diretório temporário durante os experimentos — descartado: a gravação continuaria acontecendo, e a Camada 2 futura leria desse diretório fingerprints mutados em vez do baseline.
 
 **Consequência.** O critério de conclusão da etapa — nenhum arquivo de `healing/fingerprints/` muda após a execução — passa a ser garantido por construção nos specs que definem `HEALING_CAPTURE=off`, e verificado pelo spec de integração por hash antes/depois. O mesmo interruptor serve ao harness do item 7. O custo é uma variável de ambiente a mais que precisa estar definida em toda execução sob mutação: esquecê-la não quebra nenhum teste, só o baseline — por isso a verificação por hash, e não apenas a convenção.
 
@@ -301,7 +303,7 @@ Os rótulos moram numa tabela única (`MUTATION_METADATA`) e cada entrada do cat
 
 **Data:** 2026-10-03 · **Etapa:** ferramenta de mutação de DOM · **Status:** previsão registrada **antes** da execução (commit `b49c02e`); resultado medido em 2026-10-03
 
-**Contexto.** O documento da etapa previa o M1 (reescrita de `class` e `id`) como **controle inerte**: os Page Objects priorizam `getByRole`/`getByText`, então uma suíte escrita com boas práticas seria naturalmente imune a esse tipo de mutação, e o M1 não exporia o mecanismo.
+**Contexto.** A especificação inicial da etapa previa o M1 (reescrita de `class` e `id`) como **controle inerte**: os Page Objects priorizam `getByRole`/`getByText`, então uma suíte escrita com boas práticas seria naturalmente imune a esse tipo de mutação, e o M1 não exporia o mecanismo.
 
 **Previsão (escrita antes da execução).** A premissa vale só para os alvos localizados por role (T1–T7), onde o M1 deve ser inerte. Ela **não vale** para T8–T10: preço, disponibilidade e rating do produto não têm gancho ARIA único, e o `ProductPage` os localiza por classe CSS (`.product_main p.price_color`, `p.instock.availability`, `p.star-rating`), seguindo a regra de usar CSS só quando não há alternativa. O M1 reescreve exatamente essas classes, então os três locators devem **quebrar**. O M1 continua no catálogo como controle nos alvos por role e como mutação efetiva nos outros três.
 
@@ -313,7 +315,7 @@ Os rótulos moram numa tabela única (`MUTATION_METADATA`) e cada entrada do cat
 - **Inerte em 22 de 25 entradas.** São T1 × 16 categorias e T2–T7: o locator resolve para o oráculo e o teste reproduzido passa.
 - **Quebra em 3 de 25.** São T8, T9 e T10: o locator CSS não resolve e o teste reproduzido falha.
 
-Portanto, o M1 é um controle inerte **para os alvos localizados por role**, e não para a suíte como um todo. A conclusão do documento de contexto ("a suíte escrita com boas práticas é naturalmente imune") vale na medida em que a suíte consegue usar role, e o books.toscrape.com não oferece um gancho ARIA para preço, disponibilidade e rating.
+Portanto, o M1 é um controle inerte **para os alvos localizados por role**, e não para a suíte como um todo. A conclusão da especificação inicial ("a suíte escrita com boas práticas é naturalmente imune") vale na medida em que a suíte consegue usar role, e o books.toscrape.com não oferece um gancho ARIA para preço, disponibilidade e rating.
 
 **O acoplamento do rating ainda não foi observado empiricamente.** Sem recuperação, o teste do T10 falha **antes** de ler o `class`: `expectStarRatingVisible` já não encontra o elemento. A consequência prevista, rating 0 mesmo com o elemento certo recuperado, só se torna observável quando o mecanismo relocalizar o elemento. Até lá ela é uma dedução do código (`getRatingValue` + `RATING_WORDS`), não uma medição. A confirmação fica para o harness (item 7), que deve classificar o caso na categoria "elemento certo, teste falha" do ADR-020.
 
@@ -323,7 +325,7 @@ Portanto, o M1 é um controle inerte **para os alvos localizados por role**, e n
 
 **Data:** 2026-10-03 · **Etapa:** ferramenta de mutação de DOM · **Status:** previsão (commit `b49c02e`) e regra de relato (commit `fdde2ff`) registradas **antes** da execução; matriz medida em 2026-10-03
 
-**Contexto.** Uma mutação só expõe o mecanismo de recuperação se o locator original do Page Object deixar de funcionar. O documento da etapa previa que M2, M3, M4 e M5 quebram os locators e que M1 é inerte; a leitura dos Page Objects antes de qualquer execução indica que isso vale só em parte. A previsão é registrada aqui, e commitada, antes de a matriz ser medida, para que o histórico mostre o que era esperado e o que foi observado, e não uma previsão ajustada depois.
+**Contexto.** Uma mutação só expõe o mecanismo de recuperação se o locator original do Page Object deixar de funcionar. A especificação inicial da etapa previa que M2, M3, M4 e M5 quebram os locators e que M1 é inerte; a leitura dos Page Objects antes de qualquer execução indica que isso vale só em parte. A previsão foi registrada aqui antes de a matriz ser medida, para que o registro mostre o que era esperado e o que foi observado, e não uma previsão ajustada depois.
 
 **Estados do locator.** Sem recuperação, cada entrada do catálogo cai em um de três estados, medidos contra o oráculo de `window.__mutation`:
 - **quebra** — o locator original não resolve nenhum elemento;
@@ -354,7 +356,7 @@ Portanto, o M1 é um controle inerte **para os alvos localizados por role**, e n
 | M5 × T3 link do primeiro card | quebra (o `article` 0 continua lá, sem link) | não (product-details 1–3) | falhar | risco de falso positivo: o link do card 1 é estruturalmente quase idêntico; depende da corroboração por texto (títulos distintos) |
 | M5 × T4–T10 | quebra | não | falhar | falhar previsto; a medir no item 7 |
 
-**Previsões que contradizem o documento da etapa, registradas antes de medir.**
+**Previsões que contradizem a especificação inicial da etapa, registradas antes de medir.**
 1. **M1 não é inerte para toda a suíte:** quebra os três alvos que o `ProductPage` localiza por classe CSS (T8–T10), porque nenhum deles tem gancho ARIA. É inerte só para os alvos localizados por role.
 2. **M3 não quebra nenhum locator:** onde importa (T2, T3), ele **desvia**, e nos demais é inerte.
 3. **M4 é inerte em todos os 25 alvos:** nenhum locator da suíte depende do pai direto.
@@ -368,7 +370,7 @@ Na prática, a exposição do mecanismo sob mutação fica concentrada em M1 (T8
 - O seletor da mutação casa em toda página de listagem, não só na de referência. M5 × T2 aplicado à navegação para Crime zera a listagem, e `getProductCount() > 0` falharia nesse teste. Efeitos colaterais como esse ficam para o harness, que decide qual teste roda contra qual entrada.
 - Sob M2 e M5 em T4, `hasNextPage()` usa `isVisible()`, que **devolve `false` em vez de lançar exceção**. A falha aparece na asserção do teste, não no locator. Uma Camada 2 baseada só em exceção não seria acionada nesse caminho.
 
-**Previsão do documento de contexto revista pela leitura do código.** O documento previa que o locator original **falha** sob M2, M3, M4 e M5. Antes de qualquer execução, a leitura dos Page Objects revisou essa previsão para M3 e M4. O M3 não faz nenhum locator lançar erro: nos locators por índice (T2, T3) ele **desvia**, e nos demais é inerte. O M4 é inerte nos 25 alvos. A revisão veio do código (os locators são por role, por nome ou por CSS de descendente, e nenhum depende de ordem ou do pai direto), não de uma medição. A matriz medida a confirma ou a refuta.
+**Previsão da especificação inicial revista pela leitura do código.** A especificação previa que o locator original **falha** sob M2, M3, M4 e M5. Antes de qualquer execução, a leitura dos Page Objects revisou essa previsão para M3 e M4. O M3 não faz nenhum locator lançar erro: nos locators por índice (T2, T3) ele **desvia**, e nos demais é inerte. O M4 é inerte nos 25 alvos. A revisão veio do código (os locators são por role, por nome ou por CSS de descendente, e nenhum depende de ordem ou do pai direto), não de uma medição. A matriz medida a confirma ou a refuta.
 
 **Tamanho efetivo das amostras previstas.** Contando as entradas pela previsão acima:
 - **Denominador da taxa de recuperação** (entradas `cosmetic` em que o locator quebra, ou seja, onde o mecanismo é acionado e deveria recuperar): **6 de 78**. São M1 × T8, T9 e T10, e M2 × T1-Travel, T1-Sequential Art e T4. Duas delas (Travel e next) têm falha garantida pelo teto de 0.50 (ADR-018), uma fica na borda do limiar (Sequential Art) e uma recupera o elemento, mas o teste falha mesmo assim (T10, ADR-019). As outras 72 entradas cosméticas se dividem em 70 inertes e 2 desvios (M3 × T2 e T3), que nunca acionam o mecanismo.
@@ -402,7 +404,7 @@ Na prática, a exposição do mecanismo sob mutação fica concentrada em M1 (T8
 | M5 | quebra | falha | 24 — T1 × 16, T3–T10 |
 | M5 | desvia | passa por engano | 1 — T2 |
 
-*Divergências em relação à tabela de previsão.* **Nenhuma.** As 15 linhas da tabela de previsão se confirmaram, todas no estado de locator previsto e todas no resultado de teste previsto, com "sim / não / sim, sobre o … errado" correspondendo a passa / falha / passa por engano. As cinco previsões que contradiziam o documento de contexto se confirmaram, e a revisão de M3 e M4 feita pela leitura do código se sustenta empiricamente:
+*Divergências em relação à tabela de previsão.* **Nenhuma.** As 15 linhas da tabela de previsão se confirmaram, todas no estado de locator previsto e todas no resultado de teste previsto, com "sim / não / sim, sobre o … errado" correspondendo a passa / falha / passa por engano. As cinco previsões que contradiziam a especificação inicial se confirmaram, e a revisão de M3 e M4 feita pela leitura do código se sustenta empiricamente:
 1. o M1 quebra T8–T10;
 2. o M3 desvia (T2, T3) e não quebra nenhum locator;
 3. o M4 é inerte nos 25 alvos;
