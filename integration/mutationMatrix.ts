@@ -3,8 +3,8 @@ import { HomePage } from '../pages/HomePage';
 import { CategoryPage } from '../pages/CategoryPage';
 import { ProductPage } from '../pages/ProductPage';
 import { categoriasAmostradas } from '../tests/fixtures/amostras';
-import { applyMutation, pointsToOracle, readMutationState } from '../mutation/applyMutation';
-import { MUTATION_STATE_KEY, MutationSpec, MutationTarget } from '../mutation/types';
+import { applyMutation, oraclePath, pointsToOracle, readMutationState } from '../mutation/applyMutation';
+import { MutationSpec, MutationTarget } from '../mutation/types';
 
 /**
  * Matriz de efetividade: para cada entrada do catálogo, **sem
@@ -223,8 +223,12 @@ function expectedText(spec: MutationSpec, original: string): string | null {
 /** Verifica no DOM mutado o efeito específico do tipo — não só "algo mudou". */
 async function verifyEffect(page: Page, spec: MutationSpec, clean: CleanSnapshot): Promise<boolean> {
   return page.evaluate(
-    ({ key, type, id, selector, group, text, clean }) => {
-      const oracle = (window as unknown as Record<string, { oracle: Element | null }>)[key]?.oracle ?? null;
+    ({ path, type, id, selector, group, text, clean }) => {
+      // Oráculo reconstituído pelo caminho de índices guardado na reescrita do documento.
+      let oracle: Element | null = path === null ? null : document.documentElement;
+      for (const index of path ?? []) {
+        oracle = oracle?.children[index] ?? null;
+      }
       switch (type) {
         case 'volatile-attributes': {
           const tokens = (oracle?.getAttribute('class') ?? '').split(/\s+/).filter((t) => t.length > 0);
@@ -248,7 +252,7 @@ async function verifyEffect(page: Page, spec: MutationSpec, clean: CleanSnapshot
       return false;
     },
     {
-      key: MUTATION_STATE_KEY,
+      path: await oraclePath(page),
       type: spec.type,
       id: spec.id,
       selector: spec.target.selector,

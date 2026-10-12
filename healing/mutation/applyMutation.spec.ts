@@ -1,9 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
+import { createServer, Server } from 'http';
+import { AddressInfo } from 'net';
 import { categoriasAmostradas } from '../../tests/fixtures/amostras';
 import { CATALOG, findMutation } from '../../mutation/catalog';
 import {
   MutationPlan,
   applyMutation,
+  installDocumentRewrite,
   mutateDocument,
   planOf,
   pointsToOracle,
@@ -267,63 +270,175 @@ test.describe('alvo ausente: applied false e DOM intacto', () => {
   });
 });
 
-test.describe('instalação via addInitScript', () => {
-  const ORIGIN = 'http://mutation.test';
+test.describe('instalação: reescrita do documento antes da entrega', () => {
+  // `route.fetch` vai à rede e ignora outros `route`, então as fixtures vêm de
+  // um servidor HTTP local, criado aqui — sem acesso à internet.
+  let server: Server;
+  let origin: string;
+  /** Bytes servidos por caminho, para comparar com o que a página recebeu. */
+  const BODIES: Record<string, string> = {
+    '/index.html': LISTING,
+    '/travel/index.html': TRAVEL_OWN_PAGE,
+    '/product/index.html': PRODUCT,
+    '/lenta/index.html': PRODUCT,
+  };
 
-  async function serveFixtures(page: Page): Promise<void> {
-    await page.route(`${ORIGIN}/**`, (route) => {
-      const url = new URL(route.request().url());
-      const body = url.pathname.startsWith('/product') ? PRODUCT : url.pathname.startsWith('/travel') ? TRAVEL_OWN_PAGE : LISTING;
-      return route.fulfill({ contentType: 'text/html', body });
+  /** Cargas de `/alterna/index.html`: a primeira responde a listagem, as seguintes 500. */
+  let alterna = 0;
+
+  test.beforeAll(async () => {
+    server = createServer((request, response) => {
+      const pathname = new URL(request.url ?? '/', 'http://local').pathname;
+      if (pathname === '/alterna/index.html') {
+        alterna += 1;
+        if (alterna > 1) {
+          response.writeHead(500, { 'content-type': 'text/html' }).end('<p>erro</p>');
+          return;
+        }
+        response.writeHead(200, { 'content-type': 'text/html' }).end(LISTING);
+        return;
+      }
+      const body = BODIES[pathname];
+      if (body === undefined) {
+        response.writeHead(404).end();
+        return;
+      }
+      response.writeHead(200, { 'content-type': 'text/html' });
+      if (pathname === '/lenta/index.html') {
+        // Entrega o documento em duas partes: sem a reescrita, o alvo já
+        // existiria no DOM antes de o resto chegar.
+        const middle = body.indexOf('<p class="instock');
+        response.write(body.slice(0, middle));
+        setTimeout(() => response.end(body.slice(middle)), 300);
+        return;
+      }
+      response.end(body);
     });
-  }
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+
+  test.afterAll(async () => {
+    await new Promise((resolve) => server.close(resolve));
+  });
 
   test('sem mutação instalada não há estado', async ({ page }) => {
-    await serveFixtures(page);
-    await page.goto(`${ORIGIN}/index.html`);
+    await page.goto(`${origin}/index.html`);
     expect(await readMutationState(page)).toBeNull();
   });
 
   test('vale em toda navegação e só atua onde o alvo existe', async ({ page }) => {
-    await serveFixtures(page);
     await applyMutation(page, findMutation('M1-T1-travel_2'));
 
-    await page.goto(`${ORIGIN}/index.html`);
+    await page.goto(`${origin}/index.html`);
     expect(await readMutationState(page)).toEqual({ id: 'M1-T1-travel_2', applied: true, oracleIsNull: false });
     expect(await page.locator('a[href$="/travel_2/index.html"]').getAttribute('class')).toBe('m1');
 
-    await page.goto(`${ORIGIN}/travel/index.html`);
+    await page.goto(`${origin}/travel/index.html`);
     expect(await readMutationState(page)).toEqual({ id: 'M1-T1-travel_2', applied: false, oracleIsNull: true });
 
-    await page.goto(`${ORIGIN}/product/index.html`);
+    await page.goto(`${origin}/product/index.html`);
     expect(await readMutationState(page)).toEqual({ id: 'M1-T1-travel_2', applied: false, oracleIsNull: true });
+  });
+
+  test('documento sem alvo é entregue com os bytes originais', async ({ page }) => {
+    await applyMutation(page, findMutation('M1-T1-travel_2'));
+    const response = await page.goto(`${origin}/travel/index.html`);
+    expect(await response!.text()).toBe(TRAVEL_OWN_PAGE);
+  });
+
+  test('documento com alvo chega já mutado, mesmo entregue aos pedaços', async ({ page }) => {
+    await applyMutation(page, findMutation('M1-T8'));
+    const navigation = page.goto(`${origin}/lenta/index.html`, { waitUntil: 'commit' });
+    await navigation;
+    // Lido antes de o documento terminar de chegar: o preço já existe e já está mutado.
+    const price = page.locator('.product_main > p:nth-of-type(1)');
+    await price.waitFor({ state: 'attached' });
+    expect(await price.getAttribute('class')).toBe('m1-price_color');
   });
 
   test('aplicada no contexto, vale para páginas novas', async ({ context }) => {
     await applyMutation(context, findMutation('M5-T7'));
     const page = await context.newPage();
-    await serveFixtures(page);
 
-    await page.goto(`${ORIGIN}/product/index.html`);
+    await page.goto(`${origin}/product/index.html`);
     expect(await readMutationState(page)).toEqual({ id: 'M5-T7', applied: true, oracleIsNull: true });
     expect(await page.locator('h1').count()).toBe(0);
   });
 
+  test('avisa cada documento entregue, com applied', async ({ page }) => {
+    const documentos: Array<{ url: string; applied: boolean }> = [];
+    await applyMutation(page, findMutation('M1-T1-travel_2'), { onDocument: (d) => documentos.push(d) });
+    await page.goto(`${origin}/index.html`);
+    await page.goto(`${origin}/travel/index.html`);
+    expect(documentos).toEqual([
+      { url: '/index.html', applied: true },
+      { url: '/travel/index.html', applied: false },
+    ]);
+  });
+
   test('pointsToOracle distingue o oráculo de outro elemento', async ({ page }) => {
-    await serveFixtures(page);
     await applyMutation(page, findMutation('M3-T3'));
-    await page.goto(`${ORIGIN}/index.html`);
+    await page.goto(`${origin}/index.html`);
 
     const links = page.getByRole('article').getByRole('heading', { level: 3 }).getByRole('link');
     expect(await pointsToOracle(links.nth(0))).toBe(false);
     expect(await pointsToOracle(links.nth(2))).toBe(true);
   });
 
+  test('duas páginas do mesmo contexto, mutações diferentes na mesma URL: cada uma vê o próprio oráculo', async ({
+    context,
+  }) => {
+    // Como a matriz: entradas medidas em paralelo, em páginas do mesmo contexto.
+    const invertida = await context.newPage();
+    const intacta = await context.newPage();
+    await applyMutation(invertida, findMutation('M3-T3'));
+    await applyMutation(intacta, findMutation('M1-T3'));
+    await invertida.goto(`${origin}/index.html`);
+    await intacta.goto(`${origin}/index.html`);
+
+    const titulos = (page: Page) => page.getByRole('article').getByRole('heading', { level: 3 }).getByRole('link');
+    expect(await readMutationState(invertida)).toEqual({ id: 'M3-T3', applied: true, oracleIsNull: false });
+    expect(await pointsToOracle(titulos(invertida).nth(2))).toBe(true);
+    expect(await pointsToOracle(titulos(invertida).nth(0))).toBe(false);
+    expect(await readMutationState(intacta)).toEqual({ id: 'M1-T3', applied: true, oracleIsNull: false });
+    expect(await pointsToOracle(titulos(intacta).nth(0))).toBe(true);
+  });
+
+  test('nova navegação para a mesma URL não herda o oráculo do carregamento anterior', async ({ page }) => {
+    await applyMutation(page, findMutation('M1-T3'));
+    const titulo = page.getByRole('article').getByRole('heading', { level: 3 }).getByRole('link').first();
+
+    await page.goto(`${origin}/alterna/index.html`);
+    expect(await readMutationState(page)).toEqual({ id: 'M1-T3', applied: true, oracleIsNull: false });
+    expect(await pointsToOracle(titulo)).toBe(true);
+
+    // Mesma URL, agora sem documento reescrito: não há estado deste carregamento.
+    const segunda = await page.goto(`${origin}/alterna/index.html`);
+    expect(segunda!.status()).toBe(500);
+    expect(await readMutationState(page)).toBeNull();
+    expect(await pointsToOracle(page.locator('p'))).toBe(false);
+  });
+
   test('M5 nunca aponta para o oráculo', async ({ page }) => {
-    await serveFixtures(page);
     await applyMutation(page, findMutation('M5-T2'));
-    await page.goto(`${ORIGIN}/index.html`);
+    await page.goto(`${origin}/index.html`);
 
     expect(await pointsToOracle(page.getByRole('article'))).toBe(false);
+  });
+
+  test('reserialização sem plano preserva o DOM', async ({ browser }) => {
+    const read = async (rewrite: boolean) => {
+      const context = await browser.newContext();
+      if (rewrite) {
+        await installDocumentRewrite(context, null, { reserialize: true });
+      }
+      const page = await context.newPage();
+      await page.goto(`${origin}/index.html`);
+      const html = await page.evaluate(() => document.documentElement.outerHTML);
+      await context.close();
+      return html;
+    };
+    expect(await read(true)).toBe(await read(false));
   });
 });

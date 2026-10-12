@@ -92,13 +92,17 @@ export type MutationSpec =
   | (MutationSpecBase & { type: 'wrap-in-container' })
   | (MutationSpecBase & { type: 'remove-element' });
 
-/** Propriedade de `window` onde a mutação aplicada deixa o oráculo. */
+/**
+ * Propriedade de `window` onde `mutateDocument` deixa o estado, na página
+ * auxiliar que transforma o HTML. A página do teste não a recebe: lá, o
+ * oráculo é lido do lado do Node (`readMutationState`, `pointsToOracle`).
+ */
 export const MUTATION_STATE_KEY = '__mutation';
 
 /**
- * Oráculo do alvo, guardado como propriedade JavaScript de `window` — nunca
- * como atributo: um `data-*`/`aria-*` no DOM contaminaria a heurística de
- * atributos estáveis.
+ * Oráculo do alvo, deixado por `mutateDocument` como propriedade JavaScript de
+ * `window` — nunca como atributo: um `data-*`/`aria-*` no DOM contaminaria a
+ * heurística de atributos estáveis.
  *
  * `applied: false` significa que nada foi transformado: o alvo não existe na
  * página (ex: o link "Travel" na própria página Travel), o grupo do M3 não o

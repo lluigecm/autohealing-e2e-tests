@@ -623,3 +623,36 @@ Cada sinal vira anotação do teste com o tipo, a URL e o status ou o código de
 **Alternativas consideradas.** (a) Classificar pela mensagem de erro (`net::`, `ERR_`, `timeout`): descartado, porque mensagem não é contrato e um timeout de locator quebrado tem a mesma cara de um timeout de rede. (b) Reexecutar só os testes inválidos: descartado. A invocação mistura testes num mesmo processo e mesmos workers, e reexecutar pedaços daria mais de uma chance a parte dos testes e dividiria a medição de tempo. (c) Reexecutar até passar: descartado, porque escolheria a tentativa pelo resultado. (d) Descartar a rodada inteira a cada execução inválida: descartado, porque uma oscilação de segundos em 3 h de rodada desperdiçaria a rodada.
 
 **Consequência.** Toda navegação do frame principal que falha conta como infraestrutura, inclusive uma interrompida por outra navegação (`net::ERR_ABORTED`). Isso é conservador: no pior caso, uma entrada fica não medida em vez de medida errada. Se isso acontecer de forma sistemática numa entrada, a ocorrência aparece no piloto ou no caderno, e a causa é investigada antes de se mexer no critério.
+
+---
+
+## ADR-029 — Mutação aplicada ao HTML antes da entrega, com oráculo por página e por carregamento
+
+**Data:** 2026-10-12 · **Etapa:** ferramenta de mutação e harness dos experimentos (item 7), antes da rodada principal · **Status:** aceito; implementado e verificado
+
+**Contexto.** A origem é o piloto de 2026-10-12 (caderno de experimentos). No M1-T8 com healing desligado, 3 das 96 execuções passaram. A mutação era instalada por `addInitScript` e rodava em `DOMContentLoaded`. Depois de um clique de navegação, o Playwright pode ler o DOM ainda em montagem, antes desse evento, e encontrar o alvo sem mutação. A corrida afeta toda página aberta por clique, nas duas condições, e na condição ligada apareceria como "mecanismo não acionado". É um defeito da injeção. O adendo do ADR-027 permite corrigi-lo, porque a correção não mexe em limiar, penalidades, pesos nem fatores.
+
+**Decisão.**
+- **Mutação no HTML, antes da entrega.**
+  - `applyMutation` intercepta, por `route`, cada documento do frame principal e busca a resposta original sem seguir redirecionamento.
+  - Aplica o mesmo `mutateDocument` ao HTML numa página auxiliar do mesmo navegador, com JavaScript desligado e toda requisição bloqueada.
+  - Serializa o documento inteiro (doctype, comentários de nível superior e `<html>`) e o entrega já mutado.
+  - A página do teste nunca recebe o documento original.
+- **Bytes originais quando não há alvo.** Um documento com `applied: false` é entregue com os bytes originais, sem reserializar. Só os cabeçalhos mudam: tamanho, codificação e a métrica do próximo item.
+- **Oráculo por página e por carregamento.** O oráculo deixa de ser uma referência em `window` e passa a ser um caminho de índices a partir do `documentElement`, guardado no lado do Node:
+  - a chave é a página mais um identificador do carregamento;
+  - o identificador vai no cabeçalho `Server-Timing` (`mutation-load`), que a página expõe em `performance` sem nada no DOM;
+  - duas páginas do mesmo contexto na mesma URL não se misturam;
+  - uma nova navegação para a mesma URL não herda o oráculo anterior: sem documento reescrito, não há estado.
+- **Falha na reescrita.** Se a busca ou a reescrita falhar, a navegação é abortada (`route.abort`), o que gera o `requestfailed` observado pela proteção de infraestrutura do ADR-028.
+- **O harness recebe `applied` da própria reescrita** (`onDocument`), avisado antes da entrega, e não mais de um evento da página.
+
+**Verificação** (registrada no caderno):
+1. A primeira reverificação da matriz, com o estado guardado por contexto e URL, divergiu em 27 entradas inertes. O motivo: a matriz mede 2 entradas em paralelo no mesmo contexto, e uma sobrescrevia o oráculo da outra. Um unitário reproduziu o caso e falhou com aquele código.
+2. Com o estado por página e carregamento, a matriz bate nas 103 entradas com o arquivo versionado. Isso confirma o DOM mutado e a reconstituição do oráculo.
+3. Ida e volta sem mutação: com todo documento reserializado, os 66 E2E passam e os 134 fingerprints capturados são idênticos byte a byte aos da baseline. Um controle com a M1-T8 no mesmo caminho fez 32 testes falharem, o que mostra que a reescrita estava ativa.
+4. Unitários: o documento entregue em duas partes chega já mutado; sem alvo, os bytes são os originais; os dois casos de estado (duas páginas, e nova navegação para a mesma URL) passam.
+
+**Alternativas consideradas.** (a) `MutationObserver` aplicando a mutação na inserção do alvo: descartado, porque não cobre M2 (o texto ainda não foi lido) nem M3 (o grupo está incompleto) e deixa uma janela de corrida. (b) Fazer o harness esperar o `DOMContentLoaded` antes de cada leitura: descartado, porque mudaria o tempo dos testes e exigiria interceptar o Playwright fora de `withCapture`. (c) Marcar o oráculo com um atributo no DOM: descartado pelo motivo de sempre, a contaminação da heurística de atributos. (d) Guardar o estado por contexto e URL: foi a primeira implementação, refutada pela matriz.
+
+**Consequência.** Os dados do primeiro piloto e as três passagens indevidas não entram em nada, e o piloto é repetido com a injeção nova. Todo documento do frame principal passa pela interceptação nas duas condições, com o mesmo custo nas duas. A baseline do `npm test` não usa a interceptação, e a ida e volta mostra que ela não altera o que a suíte observa.

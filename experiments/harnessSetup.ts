@@ -2,7 +2,7 @@ import { BrowserContext, Page, Request, TestInfo, test } from '@playwright/test'
 import { configureHealing, HealingLogSink, jsonlSink } from '../healing/decision/recovery';
 import { applyMutation, pointsToOracle } from '../mutation/applyMutation';
 import { findMutation } from '../mutation/catalog';
-import { MutationSpec, MUTATION_STATE_KEY } from '../mutation/types';
+import { MutationSpec } from '../mutation/types';
 import { BasePage } from '../pages/BasePage';
 import {
   harnessTestId,
@@ -19,16 +19,15 @@ import {
  *
  * Os 66 specs rodam sem alteração. A mutação entra por um patch em
  * `BasePage.prototype.goto`: todo teste começa por `HomePage.goto` ou
- * `CategoryPage.goto`, que chamam `super.goto`, e a mutação vai para o
- * contexto via `addInitScript` antes da primeira navegação, valendo também nas
- * páginas abertas por clique. Isso é igual nas duas condições.
+ * `CategoryPage.goto`, que chamam `super.goto`, e a mutação é instalada no
+ * contexto antes da primeira navegação. Ela reescreve o HTML de cada documento
+ * antes da entrega, inclusive nas páginas abertas por clique, então o teste
+ * nunca lê o documento original. Isso é igual nas duas condições.
  *
  * A recuperação não é montada aqui: com `HEALING=on`, ela já está em
  * `withCapture`. O harness só injeta o oráculo (para registro), o sink por
  * worker e o contexto da execução.
  */
-
-const BINDING = '__harnessMutationState';
 
 /** Páginas com um `goto` de Page Object em andamento: o status HTTP de erro só conta ali. */
 const inGoto = new WeakSet<Page>();
@@ -73,28 +72,14 @@ function repetitionOf(info: TestInfo): number {
 }
 
 /**
- * Mutação mais o relato de `applied` em cada página. O relato roda em
- * `DOMContentLoaded` depois da mutação (os init scripts executam na ordem de
- * registro) e vira anotação do teste, que o reporter grava junto do resultado.
+ * Mutação mais o relato de `applied` em cada documento. A reescrita avisa cada
+ * documento antes de entregá-lo à página, então o relato vira anotação do teste
+ * sem depender de evento da página.
  */
 async function installMutation(context: BrowserContext, spec: MutationSpec, info: TestInfo): Promise<void> {
   watchInfrastructure(context, info);
-  await applyMutation(context, spec);
-  await context.exposeBinding(BINDING, (_source, state: { url: string; applied: boolean | null }) => {
-    info.annotations.push({ type: MUTATION_ANNOTATION, description: JSON.stringify(state) });
-  });
-  await context.addInitScript({
-    content: `(() => {
-      const report = () => {
-        const state = window[${JSON.stringify(MUTATION_STATE_KEY)}];
-        window[${JSON.stringify(BINDING)}]({ url: location.pathname, applied: state ? state.applied : null });
-      };
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', report, { once: true });
-      } else {
-        report();
-      }
-    })();`,
+  await applyMutation(context, spec, {
+    onDocument: (state) => info.annotations.push({ type: MUTATION_ANNOTATION, description: JSON.stringify(state) }),
   });
 }
 

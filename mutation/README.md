@@ -37,13 +37,15 @@ import { findMutation } from '../mutation/catalog';
 import { applyMutation, pointsToOracle, readMutationState } from '../mutation/applyMutation';
 
 await applyMutation(page, findMutation('M3-T2'));   // ou um BrowserContext
-await page.goto('/index.html');                       // a mutação roda em DOMContentLoaded, em toda navegação
+await page.goto('/index.html');                       // o documento chega já mutado, em toda navegação
 
 await readMutationState(page);                        // { id, applied, oracleIsNull }
 await pointsToOracle(algumLocator);                   // o locator aponta para o elemento-alvo?
 ```
 
-- **Oráculo fora do DOM.** A mutação guarda `{ id, applied, oracle }` em `window.__mutation` — nunca um `data-*`/`aria-*`, que contaminaria a heurística de atributos estáveis. `applied: false` = nada transformado (alvo ausente na página, por exemplo o link "Travel" na própria página Travel); `oracle: null` com `applied: true` = M5.
+- **Mutação antes da entrega.** `applyMutation` intercepta cada documento do frame principal (`route`), aplica `mutateDocument` ao HTML numa página auxiliar do mesmo navegador, com JavaScript desligado, e entrega o documento já mutado. A página do teste nunca vê o documento original, então não há corrida entre a mutação e a primeira leitura do DOM. Documento sem o alvo é entregue com os bytes originais.
+- **Oráculo fora do DOM.** O oráculo é guardado no lado do Node, como caminho de índices a partir do `documentElement`, por página e por carregamento de documento. O carregamento é identificado por uma métrica `Server-Timing`, que não aparece no DOM. Nunca se usa um `data-*`/`aria-*`, que contaminaria a heurística de atributos estáveis. `applied: false` = nada transformado (alvo ausente na página, por exemplo o link "Travel" na própria página Travel); `oracle: null` com `applied: true` = M5.
+- **Ida e volta.** `node experiments/roundtrip.mts` roda os 66 testes com todo documento reserializado, sem mutação, e exige que os fingerprints capturados sejam idênticos byte a byte aos da baseline.
 - **Captura desligada.** Toda execução sob mutação precisa de `HEALING_CAPTURE=off`, senão uma ação bem-sucedida regravaria `healing/fingerprints/` com dados mutados. Nos specs, defina e restaure a variável em `beforeAll`/`afterAll` — não no nível do módulo, porque o worker é reaproveitado entre arquivos.
 - **Fora do escopo:** injetar uma mutação nos 66 testes E2E é decisão do harness (item 7).
 
@@ -53,7 +55,7 @@ await pointsToOracle(algumLocator);                   // o locator aponta para o
 |---|---|
 | `types.ts` | Tipos, rótulos de verdade (`MUTATION_METADATA`) e o formato do oráculo |
 | `catalog.ts` | Alvos e as 103 entradas do catálogo |
-| `applyMutation.ts` | Transformação (`mutateDocument`), instalação via `addInitScript` e leitura do oráculo |
+| `applyMutation.ts` | Transformação (`mutateDocument`), reescrita do documento antes da entrega e leitura do oráculo |
 | `effectiveness-matrix.json` | Matriz de efetividade medida no alvo real. **Gerado — não editar à mão** |
 | `targetTestMap.ts`, `targetTestMapReporter.ts`, `targetTestMap.config.ts` | Geração do mapa teste → método de Page Object → locator → alvo |
 | `target-test-map.json` | Mapa de rastreabilidade dos 66 testes aos alvos T1–T10. **Gerado — não editar à mão** |
