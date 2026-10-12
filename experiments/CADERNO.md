@@ -272,3 +272,48 @@ A **origem não foi determinada**. Na hora, eu estava editando `experiments/harn
 | Retomada de rodada já completa | Não roda nada e não chama a pré-verificação |
 
 **Anomalias.** Nenhuma.
+
+---
+
+## 2026-10-12 — Rodada principal
+
+**Autorização.** Dada pelo usuário na mensagem imediatamente anterior ao início, junto com o teste da CLI de `--resume`.
+
+**Teste da CLI de `--resume`, antes da rodada.** Comando: `node experiments/harness.mts --resume experiments/runs/ficticia-completa`, sobre uma rodada fictícia no commit `09289cf`, com 2 invocações e as duas já com desfecho. Resultado: "2 concluídas, 0 pendentes", código de saída 0, nenhuma invocação executada, nenhuma pré-verificação e `resumes.jsonl` registrado. Não houve acesso ao site.
+
+**Ambiente.** Node v24.14.0, Playwright 1.63.0, Windows 11 Home 10.0.26200. `experiments/harness.config.ts`: 2 workers, `actionTimeout` de 5 s, timeout de teste de 30 s, `retries: 0`, `HEALING_CAPTURE=off`.
+
+**Commit.** `09289cf`, com a árvore limpa (`plan.json`: `dirty: false`).
+
+**Comando.** `node experiments/harness.mts --run`, com a saída completa em `experiments/runs/principal.log`. Rodada `experiments/runs/2026-10-12T16-32-03-131Z/`.
+
+**Início.** 13:32:02 (horário local).
+
+**Conferência das duas primeiras invocações** (M1-T1-crime_51, desligada e depois ligada):
+- teste `category-navigation › Crime` passou nas duas condições, como na matriz (`inerte`, `passa`);
+- `applied: true` na home, onde está o alvo. Na página da categoria Crime, `applied: false`, porque lá o link da própria categoria não tem o seletor do alvo, como no caso de Travel;
+- nenhum `healing-*.jsonl` em nenhuma condição. Era o esperado: entrada inerte, sem quebra, e a condição desligada nunca registra o mecanismo;
+- 0 execuções inválidas. A primeira execução levou 5,1 s e a segunda 2,2 s; a diferença é o aquecimento inicial.
+
+Nada destoou, e a rodada seguiu.
+
+**Fim.** 16:37:11 (horário local). **Duração real: 3h05min09s.** A estimativa calibrada no segundo piloto era 2h52min, ou cerca de 3h05min contando a margem de 7% observada nos pilotos.
+
+**Resultado resumido** (conferência operacional, não análise):
+- 206/206 invocações com desfecho, todas **medidas**; nenhuma não medida e nenhuma retomada.
+- 4.040/4.040 execuções gravadas na última tentativa de cada invocação; 0 execuções inválidas nessas tentativas.
+- `applied: true` em ao menos uma página de **todas** as 4.040 execuções. Nenhum teste fica fora pelo critério de `applied: false` (ADR-024).
+- **Condição desligada contra a matriz** (ADR-027), no teste reproduzido de cada entrada: **0 divergências em 103 entradas**.
+- Log do mecanismo: 0 entradas na condição desligada e 930 na ligada.
+- Arquivos: 1.739 `tests-w*.jsonl` e 660 `healing-w*.jsonl`. São muitos porque o Playwright troca o worker depois de cada teste que falha, e cada worker novo recebe um índice novo. A junção na análise lê todos os arquivos de cada tentativa (ADR-026), então isso não muda nada.
+
+**Anomalias.**
+1. **Uma reexecução por infraestrutura (ADR-028).** Invocação 47/206, M1-T9 com healing ligado, tentativa 1: 15 das 96 execuções tiveram o sinal `navigation-failed`, todas com `net::ERR_FAILED` no `goto` de uma página de categoria (8 categorias diferentes). A invocação rodou de novo inteira: tentativa 2 com 96/96 válidas. A análise usa só a tentativa 2, e a tentativa 1 fica no diretório para auditoria.
+2. **A causa de fundo do `net::ERR_FAILED` não foi registrada.** Esse código é o que a reescrita do documento (ADR-029) produz quando cai no próprio `catch` e aborta a navegação com `route.abort('failed')`. A falha pode ter vindo do fetch ao site ou da página auxiliar, e o `catch` não guarda o erro original. A classificação como infraestrutura seguiu o desenho do ADR-029. A lacuna é só de diagnóstico, e registrar o erro original no `catch` fica como melhoria para rodadas futuras, sem mudar esta.
+
+**Cópia oficial.** O diretório da rodada foi copiado sem edição para `experiments/results/2026-10-12T16-32-03-131Z/`: 2.505 arquivos, 8,9 MB, `diff -r` sem diferenças. O log do console (`experiments/runs/principal.log`, 2,2 MB) fica fora da cópia, em `experiments/runs/`, que é ignorado pelo git.
+
+**Preservação dos resultados (2026-10-12, depois da rodada).**
+- `.gitattributes` com `experiments/results/** -text`, commitado em `0a3c31c` **antes** dos resultados. Sem ele, o `core.autocrlf=true` do repositório converteria o fim de linha da cópia de trabalho em checkouts futuros, e a cópia deixaria de ser idêntica à rodada.
+- **Manifesto:** `experiments/results/2026-10-12T16-32-03-131Z/MANIFEST.sha256`, no formato do `sha256sum`, com 2.506 linhas. Os hashes foram calculados **a partir dos originais**: os 2.505 arquivos da rodada em `experiments/runs/2026-10-12T16-32-03-131Z/` e o log do console em `experiments/runs/principal.log`, que na cópia se chama `console.log`.
+- **Conferência:** `sha256sum -c MANIFEST.sha256` dentro do diretório dos resultados confere os 2.506 arquivos, e `cmp` confirma o log idêntico. Para verificar no futuro, basta rodar o mesmo comando ali.

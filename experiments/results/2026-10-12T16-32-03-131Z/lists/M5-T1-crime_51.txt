@@ -1,0 +1,1 @@
+category-navigation.spec.ts › navega da Home para a categoria "Crime" e exibe a listagem correspondente
