@@ -488,6 +488,8 @@ Na prática, a exposição do mecanismo sob mutação fica concentrada em M1 (T8
 
 **Consequência.** Uma entrada que diverge da matriz nesse sentido não é recuperada por construção, seja qual for o desempenho do healing. A tabela à parte é obrigatória sempre que houver divergência, porque é nela que o leitor separa a suíte do mecanismo.
 
+**Errata (2026-10-11).** O exemplo do Contexto está errado: o T1-travel_2 **não** aparece nos três `product-details` de Travel. Pelo `mutation/target-test-map.json`, ele é exercitado por 1 teste só, o `category-navigation` de Travel, porque os `product-details` entram pela URL da categoria (`CategoryPage.goto`) e não pela sidebar. A decisão não muda, porque a divergência entre testes continua possível em outros alvos: na definição A do ADR-022, o T2 tem 66 testes, o T3 tem 48, o T8 e o T9 têm 32 cada, e o T5, o T7 e o T10 têm 16 cada.
+
 ---
 
 ## ADR-025 — Agregação das execuções por entrada: na dúvida, contra o mecanismo
@@ -556,3 +558,35 @@ A contagem bruta é descritiva. Ela não entra na taxa e não substitui o desfec
 **Alternativas consideradas.** (a) Modo sombra na condição desligada, com as heurísticas rodando sem substituir: descartado. Isso contaminaria o controle com o custo das heurísticas e o overhead deixaria de ser medido contra a baseline real. (b) Um log único compartilhado entre os workers: descartado, porque exigiria trava ou ordem de escrita, e a ordem do arquivo passaria a depender do agendamento. (c) N = 3 também para as entradas inertes: descartado. Elas multiplicariam o tempo da rodada sem medir o mecanismo, e uma passada já basta para detectar o acionamento indevido. (d) Resolver divergência entre repetições por maioria: descartado, pelo mesmo motivo da alternativa (a) do ADR-025.
 
 **Consequência.** Ficam respondidos os pontos (1) e (3) do "Em aberto" do ADR-023. O ponto (2), quem produz o `detectionWaitMs`, continua aberto até a Camada 2. Uma divergência entre repetições não é ruído a esconder: ela entra no relato como achado de não determinismo, do alvo ou do mecanismo.
+
+---
+
+## ADR-027 — Detecção por exceção, recuperação em `withCapture` e parâmetros do harness
+
+**Data:** 2026-10-11 · **Etapa:** Camada 2 e harness dos experimentos (item 7), antes do código · **Status:** aceito; fixado antes de escrever o código e antes de qualquer execução de M5 com healing ligado
+
+**Contexto.** O harness precisa de uma forma de detectar o locator quebrado. A Camada 2 ainda não existe, e esperar a exceção da ação sem `actionTimeout` consome o timeout do teste inteiro (30 s): o teste morre antes de o `catch` rodar. A alternativa óbvia é uma pré-checagem de anexação com tempo limitado (`locator.waitFor({ state: 'attached' })`) antes da ação, mas ela confunde "o elemento sumiu" com "o elemento legitimamente não existe". `hasNextPage()` usa `isVisible()` e, na última página da listagem, o link "next" não existe por design. A pré-checagem acionaria a recuperação ali sem nenhuma mutação, e isso seria um falso positivo fabricado pelo próprio detector. Ficavam em aberto também onde a recuperação mora, qual o papel do oráculo, onde se mede o overhead, qual definição do ADR-022 seleciona os testes e quantos workers rodam.
+
+**Decisão.**
+
+*Detecção.* Não há pré-checagem. O `experiments/harness.config.ts` fixa `actionTimeout: 5_000` **nas duas condições**. A detecção acontece quando a ação dentro de `withCapture` **lançou exceção e, depois da falha, `locator.count() === 0`**. Com `count() > 1` (ou `=== 1`), o elemento existe e a falha não é de localização: o erro original é relançado sem recuperação. `isVisible()` não lança exceção, então o `hasNextPage()` da última página nunca aciona o mecanismo. O `detectionWaitMs` passa a ser produzido por `withCapture`: é o tempo do início da ação até a exceção. Isso responde ao ponto (2) do "Em aberto" do ADR-023.
+
+*Paridade com a suíte.* A única diferença do `harness.config.ts` em relação ao `npm test` que altera o comportamento dos testes é o `actionTimeout`, e ela vale igual nas duas condições. O reporter e o número de workers também diferem, mas não mudam o desfecho de nenhum teste. Na rodada, os desfechos da condição desligada são conferidos contra a matriz versionada (`mutation/effectiveness-matrix.json`): o teste reproduzido de cada entrada tem de ter o desfecho que a matriz registra. Uma discordância é relatada antes de qualquer análise da condição ligada.
+
+*Onde fica a recuperação.* A ligação vai para `healing/withCapture.ts`, atrás de `HEALING` (`on`/`off`, **desligado por padrão**, lido a cada chamada, no mesmo padrão de `HEALING_CAPTURE`). Com `HEALING` desligado, o comportamento é idêntico ao atual. Unitários cobrem os dois caminhos. O harness só define `HEALING=on` na condição ligada e não substitui `withCapture`. A injeção da mutação continua pelo patch em `BasePage.prototype.goto`, que chama `applyMutation` no contexto antes da primeira navegação. Quando a decisão é `fail` ou a ação recuperada falha, o erro original é relançado, com a tentativa anexada como `cause`, e o teste falha como falharia sem healing.
+
+*Oráculo.* `pointsToOracle` serve **só para registro** (`candidateIsOracle`). A decisão nunca o consulta. O harness injeta o oráculo, e a camada de healing não importa a ferramenta de mutação (ADR-023). Um unitário prova que a decisão é idêntica com o oráculo indisponível.
+
+*Overhead.* São relatadas duas medidas, separadas:
+- **custo passivo:** a diferença de duração entre as condições, nos pares (entrada, teste) em que o mecanismo **não** foi acionado e o teste passou nas duas, com mediana e intervalo (ADR-026);
+- **custo da recuperação:** `timings.recoveryMs` de cada tentativa.
+
+A diferença de duração nos testes quebrados não é usada como overhead, porque mede o timeout e não o mecanismo.
+
+*Mapeamento entrada → testes.* Usa a **definição A** do ADR-022: algum locator do teste resolve o alvo ou passa por ele. Isso inclui os locators de coleção, porque a mutação de um ancestral afeta o teste mesmo quando o alvo não é o objeto da asserção (M3-T2 desvia `openProductByIndex(0)`). Os testes vêm de `mutation/target-test-map.json`, cruzado com o `target` de cada linha da matriz.
+
+*Workers.* São 2, fixos nas duas condições.
+
+**Alternativas consideradas.** (a) Pré-checagem `waitFor({ state: 'attached' })` com healing ligado: descartada, pelo falso positivo no `hasNextPage()` da última página. Ela também trocaria a base da detecção (exceção por ausência) só na condição ligada. (b) `actionTimeout` só na condição ligada: descartado, porque a condição desligada falharia em 30 s e a ligada em 5 s, e a diferença de duração mediria a configuração e não o mecanismo. (c) Classificar a falha pela mensagem do erro: descartado, porque `toBeVisible()` falha por timeout tanto com o elemento ausente quanto com ele presente e oculto. (d) Recuperação montada só no harness, trocando `withCapture` como faz o mapa teste → alvo: descartada, porque o mecanismo avaliado tem de ser o que a suíte carrega, não uma versão que só existe no experimento. (e) Definição B: descartada, porque reduziria os desvios do M3-T2 e do M5-T2 a um teste só.
+
+**Consequência.** Com o `actionTimeout` de 5 s, a condição desligada também falha rápido nos testes quebrados, e a rodada fica mais curta do que com o timeout de 30 s. Um elemento presente mas inutilizável (oculto, coberto) nunca aciona a recuperação, o que fica registrado como limite do detector: ele trata só a ausência.
