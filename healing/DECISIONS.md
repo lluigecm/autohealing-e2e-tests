@@ -656,3 +656,30 @@ Cada sinal vira anotação do teste com o tipo, a URL e o status ou o código de
 **Alternativas consideradas.** (a) `MutationObserver` aplicando a mutação na inserção do alvo: descartado, porque não cobre M2 (o texto ainda não foi lido) nem M3 (o grupo está incompleto) e deixa uma janela de corrida. (b) Fazer o harness esperar o `DOMContentLoaded` antes de cada leitura: descartado, porque mudaria o tempo dos testes e exigiria interceptar o Playwright fora de `withCapture`. (c) Marcar o oráculo com um atributo no DOM: descartado pelo motivo de sempre, a contaminação da heurística de atributos. (d) Guardar o estado por contexto e URL: foi a primeira implementação, refutada pela matriz.
 
 **Consequência.** Os dados do primeiro piloto e as três passagens indevidas não entram em nada, e o piloto é repetido com a injeção nova. Todo documento do frame principal passa pela interceptação nas duas condições, com o mesmo custo nas duas. A baseline do `npm test` não usa a interceptação, e a ida e volta mostra que ela não altera o que a suíte observa.
+
+---
+
+## ADR-030 — Ordem das invocações, árvore limpa e regra de interrupção da rodada
+
+**Data:** 2026-10-12 · **Etapa:** harness dos experimentos (item 7), antes da rodada principal · **Status:** aceito; fixado antes da rodada principal
+
+**Contexto.** A rodada principal leva cerca de 3 h. Nesse tempo, a latência do site e a carga da máquina variam. Até aqui, o plano intercalava as condições por entrada, mas sempre com a desligada antes, e uma deriva sistemática dentro de cada par cairia sempre do mesmo lado. Faltava também uma regra para uma rodada que para no meio. Na preparação apareceu ainda uma rodada iniciada às 09:23 (caderno de experimentos). Ela parou na primeira invocação, com 0 de 1 execução, e o orquestrador gravou essa invocação como "medida": o desfecho só olhava os sinais de infraestrutura e não conferia se os testes tinham rodado.
+
+**Decisão.**
+- **Ordem.** As condições continuam intercaladas por entrada, na ordem da matriz, e passam a **alternar qual vai primeiro**: entrada de posição par começa pela desligada, ímpar pela ligada. Nas 103 entradas, 52 começam pela desligada e 51 pela ligada. A simulação mostra essa contagem antes de cada rodada.
+- **Árvore limpa.** `--run` e `--resume` recusam rodar se `git status --porcelain` não estiver vazio. O `plan.json` de uma rodada oficial sempre tem `dirty: false`, e o commit gravado nele é exatamente o código executado.
+- **Interrupção.** Se a rodada abortar (pré-verificação do ADR-028, invocação incompleta ou interrupção externa), ela é **retomada no mesmo commit**, com `--resume <rodada>`, que recusa um HEAD diferente. A retomada usa o plano gravado em `plan.json`, não um recalculado:
+  - uma invocação é **concluída** quando tem desfecho em `outcomes.jsonl` (medida ou não medida), e uma invocação concluída **nunca roda de novo**;
+  - uma invocação sem desfecho roda do início, e as tentativas parciais dela vão para `interrompidas/<momento>/`, guardadas para auditoria e fora da análise;
+  - cada retomada é registrada em `resumes.jsonl`, e o `aborted.json` anterior é renomeado com o momento.
+
+  Toda interrupção e toda retomada são anotadas no caderno, com o intervalo entre elas.
+- **Invocação incompleta.** Se o Playwright terminar sem código de saída (interrompido) ou com menos execuções que as previstas, a rodada é **abortada**. A tentativa fica em `invocations.jsonl` como `incomplete: true`, e a invocação **não recebe desfecho**, então a retomada a refaz. Não é falha de infraestrutura (ADR-028), porque não há sinal estruturado. Também não é desfecho de teste, porque o teste não rodou.
+
+**Alternativas consideradas.**
+- (a) Blocos por condição, todas as desligadas e depois todas as ligadas: descartado, porque a deriva de 3 h cairia inteira entre as duas condições.
+- (b) Ordem aleatória: descartado. Uma semente fixa daria o mesmo efeito com menos legibilidade, e a alternância já é determinística.
+- (c) Recomeçar a rodada inteira depois de uma interrupção: descartado, porque daria uma segunda chance às invocações já medidas.
+- (d) Retomar com outro commit: descartado, porque misturaria código diferente na mesma rodada.
+
+**Consequência.** Uma rodada retomada tem um intervalo de tempo no meio. Ele fica registrado e é relatado. A rodada iniciada às 09:23, com a ordem antiga e o desfecho errado, não é oficial e não é retomada.

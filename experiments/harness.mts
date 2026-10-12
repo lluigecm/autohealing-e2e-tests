@@ -3,6 +3,8 @@
  *
  *   node experiments/harness.mts                  simulação (padrão): não toca no site
  *   node experiments/harness.mts --run            executa contra o site
+ *   node experiments/harness.mts --resume experiments/runs/<rodada>
+ *                                                 retoma uma rodada interrompida
  *
  * Opções: --entries M1-T8,M5-T2 (subconjunto), --per-test-s 3, --broken-extra-s 5,
  * --startup-s 5, --calibrate-from experiments/runs/<rodada>.
@@ -15,11 +17,16 @@
  * - testes de cada entrada: definição A do mapa (o locator resolve o alvo ou passa por ele);
  * - repetições: 3 por teste e condição para as entradas que quebram ou desviam
  *   o locator, 1 para as inertes;
- * - condições intercaladas por entrada (desligada, depois ligada), para que uma
- *   variação de latência do site no tempo afete as duas igualmente.
+ * - condições intercaladas por entrada, alternando qual vai primeiro (entrada
+ *   de posição par: desligada antes; ímpar: ligada antes), para que a deriva do
+ *   site ao longo da rodada não caia numa condição só.
+ *
+ * `--run` e `--resume` exigem a árvore do git limpa, e `--resume` exige o mesmo
+ * commit da rodada interrompida: só as invocações sem desfecho registrado rodam,
+ * e as concluídas nunca rodam de novo.
  */
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
@@ -113,15 +120,15 @@ function buildPlan(only: Set<string> | null): Invocation[] {
   }
 
   const plan: Invocation[] = [];
-  for (const row of rows) {
-    if (only && !only.has(row.id)) {
-      continue;
-    }
+  const selected = rows.filter((row) => !only || only.has(row.id));
+  for (const [position, row] of selected.entries()) {
     const tests = byInstance.get(row.target);
     if (!tests || tests.length === 0) {
       throw new Error(`${row.id}: alvo ${row.target} sem testes no mapa (definição A)`);
     }
-    for (const condition of CONDITIONS) {
+    // Alterna qual condição abre a entrada: a deriva ao longo da rodada se divide entre as duas.
+    const order = position % 2 === 0 ? CONDITIONS : [...CONDITIONS].reverse();
+    for (const condition of order) {
       plan.push({
         entryId: row.id,
         group: groupOf(row),
@@ -256,6 +263,12 @@ function simulate(plan: Invocation[], costs: Costs): void {
   console.log(`Invocações do Playwright: ${plan.length}`);
   console.log(`Execuções de teste: ${executions} (${CONDITIONS.map((c) => `${c} ${perCondition[c]}`).join(', ')})`);
   console.log(`Tempo estimado: ${hms(total)} com ${WORKERS} workers`);
+  const opensWith = (condition: Condition) =>
+    plan.filter((inv, index) => index % 2 === 0 && inv.condition === condition).length;
+  console.log(
+    `Ordem: condições intercaladas por entrada; abre com healing-off em ${opensWith('healing-off')} entradas e com healing-on em ${opensWith('healing-on')}. ` +
+      `Primeiras: ${plan.slice(0, 4).map((inv) => `${inv.entryId}/${inv.condition}`).join(', ')}`,
+  );
   console.log(
     `Custos: ${costs.perTestS}s por teste, +${costs.brokenExtraS}s com locator quebrado, ` +
       `${costs.startupS}s de inicialização por invocação — ${costs.source}`,
@@ -346,25 +359,100 @@ function runAttempt(runDir: string, listFile: string, inv: Invocation, attempt: 
   };
 }
 
+interface RunState {
+  runDir: string;
+  plan: Invocation[];
+  /** Invocações com desfecho registrado (`entrada|condição`): nunca rodam de novo. */
+  done: Set<string>;
+}
+
+function invocationKey(inv: { entryId?: unknown; condition?: unknown }): string {
+  return `${String(inv.entryId)}|${String(inv.condition)}`;
+}
+
+function requireCleanTree(): { commit: string; dirty: boolean } {
+  const state = gitState();
+  if (state.dirty) {
+    console.error('[harness] árvore do git com mudanças: commite antes de rodar (`git status --porcelain` não está vazio).');
+    process.exit(3);
+  }
+  return state;
+}
+
+function newRun(plan: Invocation[], costs: Costs): RunState {
+  const git = requireCleanTree();
+  const runId = new Date().toISOString().replace(/[:.]/g, '-');
+  const runDir = path.join(ROOT, 'experiments', 'runs', runId);
+  mkdirSync(runDir, { recursive: true });
+  writeFileSync(
+    path.join(runDir, 'plan.json'),
+    `${JSON.stringify({ runId, git, node: process.version, workers: WORKERS, costs, plan }, null, 2)}\n`,
+  );
+  console.log(`Rodada ${runId}`);
+  return { runDir, plan, done: new Set() };
+}
+
 /**
- * Executa o plano. Antes de cada tentativa, pré-verifica a home; com três
+ * Retomada de uma rodada interrompida: mesmo commit e o plano gravado em
+ * `plan.json`, não um recalculado. Uma invocação sem desfecho em
+ * `outcomes.jsonl` não foi concluída. As tentativas parciais dela vão para
+ * `interrompidas/<momento>/`, para auditoria, e ela roda do início. As
+ * concluídas nunca rodam de novo.
+ */
+function resumeRun(runDirArg: string): RunState {
+  const runDir = path.resolve(ROOT, runDirArg);
+  const saved = JSON.parse(readFileSync(path.join(runDir, 'plan.json'), 'utf8')) as {
+    git: { commit: string };
+    plan: Invocation[];
+  };
+  const git = requireCleanTree();
+  if (git.commit !== saved.git.commit) {
+    console.error(`[harness] retomada recusada: a rodada é do commit ${saved.git.commit} e o HEAD é ${git.commit}.`);
+    process.exit(3);
+  }
+
+  const outcomesFile = path.join(runDir, 'outcomes.jsonl');
+  const done = new Set(existsSync(outcomesFile) ? readJsonl(outcomesFile).map(invocationKey) : []);
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const moved: string[] = [];
+  for (const inv of saved.plan.filter((candidate) => !done.has(invocationKey(candidate)))) {
+    const partial = path.join(runDir, inv.condition, inv.entryId);
+    if (existsSync(partial)) {
+      const target = path.join(runDir, 'interrompidas', stamp, inv.condition, inv.entryId);
+      mkdirSync(path.dirname(target), { recursive: true });
+      renameSync(partial, target);
+      moved.push(invocationKey(inv));
+    }
+  }
+  const aborted = path.join(runDir, 'aborted.json');
+  if (existsSync(aborted)) {
+    renameSync(aborted, path.join(runDir, `aborted-${stamp}.json`));
+  }
+  const pending = saved.plan.length - done.size;
+  appendFileSync(
+    path.join(runDir, 'resumes.jsonl'),
+    `${JSON.stringify({ at: new Date().toISOString(), commit: git.commit, done: done.size, pending, moved })}\n`,
+  );
+  console.log(`Retomando ${path.relative(ROOT, runDir)}: ${done.size} concluídas, ${pending} pendentes.`);
+  return { runDir, plan: saved.plan, done };
+}
+
+/**
+ * Executa as invocações pendentes do plano. Antes de cada tentativa, pré-verifica a home; com três
  * falhas seguidas, aborta a rodada. Uma invocação com execução inválida por
  * infraestrutura roda de novo, inteira, uma única vez; continuando inválida,
  * fica não medida. Teste que falhou por outro motivo nunca é reexecutado.
  */
-async function execute(plan: Invocation[], costs: Costs): Promise<void> {
-  const runId = new Date().toISOString().replace(/[:.]/g, '-');
-  const runDir = path.join(ROOT, 'experiments', 'runs', runId);
+async function execute(run: RunState): Promise<void> {
+  const { runDir, plan, done } = run;
   const listsDir = path.join(runDir, 'lists');
   mkdirSync(listsDir, { recursive: true });
-  writeFileSync(
-    path.join(runDir, 'plan.json'),
-    `${JSON.stringify({ runId, git: gitState(), node: process.version, workers: WORKERS, costs, plan }, null, 2)}\n`,
-  );
-  console.log(`Rodada ${runId}`);
 
   const unmeasured: string[] = [];
   for (const [index, inv] of plan.entries()) {
+    if (done.has(invocationKey(inv))) {
+      continue;
+    }
     // O `--test-list` é relativo ao `testDir`: os ids do mapa vêm com o prefixo `tests/`.
     const listFile = path.join(listsDir, `${inv.entryId}.txt`);
     writeFileSync(listFile, `${inv.tests.map((id) => id.replace(/^tests\//, '')).join('\n')}\n`);
@@ -390,6 +478,25 @@ async function execute(plan: Invocation[], costs: Costs): Promise<void> {
         `[${index + 1}/${plan.length}] ${inv.entryId} ${inv.condition} × ${inv.tests.length} testes × ${inv.repeatEach} (tentativa ${attempt})`,
       );
       const result = runAttempt(runDir, listFile, inv, attempt);
+      if (result.exitCode === null || result.executions !== result.expectedExecutions) {
+        // Playwright interrompido ou sem chegar ao fim: não é desfecho de teste nem
+        // sinal de infraestrutura. A invocação fica sem desfecho e a retomada a refaz.
+        appendFileSync(
+          path.join(runDir, 'invocations.jsonl'),
+          `${JSON.stringify({ entryId: inv.entryId, condition: inv.condition, attempt, ...result, valid: false, incomplete: true })}\n`,
+        );
+        const aborted = {
+          at: new Date().toISOString(),
+          invocation: index + 1,
+          entryId: inv.entryId,
+          condition: inv.condition,
+          attempt,
+          problems: [`invocação incompleta: ${result.executions} de ${result.expectedExecutions} execuções, código de saída ${result.exitCode}`],
+        };
+        writeFileSync(path.join(runDir, 'aborted.json'), `${JSON.stringify(aborted, null, 2)}\n`);
+        console.log(`Rodada ABORTADA na invocação ${index + 1}: ${aborted.problems[0]} (${path.relative(ROOT, runDir)}/aborted.json)`);
+        process.exit(4);
+      }
       const valid = result.invalidExecutions === 0;
       appendFileSync(
         path.join(runDir, 'invocations.jsonl'),
@@ -412,7 +519,7 @@ async function execute(plan: Invocation[], costs: Costs): Promise<void> {
   }
 
   console.log(`Rodada concluída em ${path.relative(ROOT, runDir)}`);
-  console.log(unmeasured.length === 0 ? 'Todas as invocações medidas.' : `Não medidas: ${unmeasured.join(', ')}`);
+  console.log(unmeasured.length === 0 ? 'Todas as invocações desta execução medidas.' : `Não medidas: ${unmeasured.join(', ')}`);
 }
 
 const options = args();
@@ -427,8 +534,11 @@ const defaults: Costs = {
 const calibrateFrom = options.get('calibrate-from');
 const costs = typeof calibrateFrom === 'string' ? calibrate(path.resolve(ROOT, calibrateFrom), defaults) : defaults;
 
-if (options.get('run') === true) {
-  await execute(plan, costs);
+const resume = options.get('resume');
+if (typeof resume === 'string') {
+  await execute(resumeRun(resume));
+} else if (options.get('run') === true) {
+  await execute(newRun(plan, costs));
 } else {
   simulate(plan, costs);
 }

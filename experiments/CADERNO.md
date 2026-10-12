@@ -214,3 +214,30 @@ Os logs estão em `experiments/runs/`, que é ignorado pelo git.
 | **Calibrada neste piloto** | **2,6 s**, **+4,6 s**, **5,6 s** | 13min41s (real: 14min47s) | **2h52min** |
 
 **Anomalias.** Nenhuma falha. Um custo novo: a duração mediana de um teste com locator intacto subiu de 1,5 s para 2,6 s (M4-T5, nas duas condições). O aumento corresponde à interceptação dos documentos (`route.fetch` e reescrita na página auxiliar), que é igual nas duas condições e não entra na medida de overhead. O modelo subestimou este piloto em 7%, a mesma margem do primeiro.
+
+---
+
+## 2026-10-12 — Rodada iniciada sem registro às 09:23, e preparação da rodada principal
+
+**Rodada inesperada.** Durante a preparação apareceu o diretório `experiments/runs/2026-10-12T12-23-06-353Z/`, criado às 09:23:06 (horário local). O que se sabe:
+- foi uma rodada completa (`--run` sem `--entries`, 206 invocações no plano), no commit `025ce82`, com a árvore limpa e a ordem **antiga**, sempre com a desligada antes;
+- parou na **primeira invocação** (M1-T1-crime_51, healing desligado): o Playwright saiu com código 1 em 606 ms e **0 de 1 execução**. A pré-verificação fez um GET na home, e nenhum teste rodou contra o site;
+- o orquestrador gravou essa invocação como **"medida"**. Era um bug: o desfecho só olhava os sinais de infraestrutura e não conferia o número de execuções;
+- às 09:25 não havia processo do harness rodando.
+
+A **origem não foi determinada**. Na hora, eu estava editando `experiments/harness.mts` e um dos meus comandos de shell falhou com erro de sintaxe. Não dá para afirmar se foi esse comando ou uma execução manual. A rodada **não é oficial** e não será retomada. O diretório fica em `experiments/runs/`, que é ignorado pelo git.
+
+**Mudanças antes da rodada principal** (ADR-030):
+- condições alternando qual vai primeiro em cada entrada: 52 entradas começam pela desligada e 51 pela ligada;
+- `--run` e `--resume` exigem a árvore limpa. Verificado com a árvore suja: os dois recusaram, com código 3;
+- regra de interrupção: retomada no mesmo commit, só das invocações sem desfecho;
+- invocação incompleta (Playwright interrompido ou com menos execuções que as previstas) aborta a rodada sem gravar desfecho. Essa é a correção do bug acima.
+
+**Confirmações pedidas antes da rodada principal**, todas com registro nas entradas anteriores:
+
+| Item | Resultado |
+|---|---|
+| Unitário da corrida, antes e depois da correção | Falhou antes (`unit-duas-paginas-antes.log`: página com M3-T3 leu `M1-T3`) e passou depois (`unit-pos-correcao.log`, 109/109) |
+| Matriz depois da correção | Bateu nas 103 entradas (`matriz-2026-10-12-b.log`) |
+| Ida e volta | 134/134 fingerprints idênticos, 0 faltando, 0 sobrando, 0 diferentes. Bytes originais com `applied: false` cobertos por unitário |
+| ADR da troca de mecanismo | ADR-029, commitado em `54af588` |
