@@ -534,3 +534,25 @@ A contagem bruta é descritiva. Ela não entra na taxa e não substitui o desfec
 **Alternativas consideradas.** (a) Maioria das execuções: descartada. Com N pequeno o limiar é arbitrário (2 de 4 empata), e a maioria transforma um mecanismo que erra às vezes num mecanismo que acerta. (b) Recuperação contada só nos testes em que o locator quebrou: descartada. Ela retira do critério justamente os testes em que a mutação não acionou o mecanismo e, com n = 6, pode transformar uma divergência da suíte em acerto do healing sem que isso apareça no número. (c) Unidade por par (entrada, teste) como métrica principal: descartada. Multiplicaria o denominador por observações que não são independentes (como as 16 instâncias de T1 no falso positivo, ADR-020). Essa granularidade sobrevive na contagem bruta e na tabela do ADR-024. (d) Regras assimétricas por conveniência, como "qualquer" para recuperação e "todos" para falso positivo: descartada, porque favoreceriam o mecanismo dos dois lados. (e) Recuperação = `replace` em todos os testes, como na primeira redação deste ADR: descartada antes do commit. Contaria como recuperada uma substituição pelo elemento errado, desde que o teste passasse por engano, e também o caso do T10, em que o teste falha. (f) Retirar "elemento certo, teste falha" do denominador: descartada. Melhoraria a taxa com um caso em que o teste, que é o que o usuário vê, continua quebrado.
 
 **Consequência.** A taxa de recuperação é um limite inferior e a de falso positivo é um limite superior. A contagem bruta mostra o quanto cada entrada está longe do outro desfecho. Com o denominador previsto de 6 (ADR-020), o caso do T10 sob M1 já sai do numerador por construção.
+
+---
+
+## ADR-026 — Condição desligada, arquivos de log e repetições do harness
+
+**Data:** 2026-10-11 · **Etapa:** harness dos experimentos (item 7), antes do código · **Status:** aceito; fixado antes de escrever o harness e antes de qualquer execução de M5 com healing ligado
+
+**Contexto.** O ADR-023 deixou em aberto três pontos de que o harness depende: o que a condição `healing-off` registra, como o log é dividido entre os workers e quantas vezes cada teste roda. Os três mudam o que pode ser medido, então ficam fixados antes do código.
+
+**Decisão.**
+
+*Condição desligada.* `healing-off` é o **controle**, e roda a suíte baseline intocada: sem checagem de detecção, sem heurísticas e sem modo sombra. O mecanismo não grava nenhuma entrada nessa condição. O que ela registra vem só do Playwright: o resultado e a duração de cada teste. É contra essa duração que o overhead da condição ligada é medido.
+
+*Log.* Há um `.jsonl` por worker e por condição, dentro de um diretório próprio de cada rodada do harness. Cada evento carrega `entryId`, `testId`, `repetition` e `condition`. Nenhum worker escreve no arquivo de outro, então não há escrita concorrente. A junção dos arquivos é feita na análise, com ordenação determinística por (`condition`, `entryId`, `testId`, `repetition`), e o resultado não depende da ordem em que os workers terminaram.
+
+*Repetições.* As entradas que expõem o mecanismo ou o desvio rodam **N = 3 por teste e por condição**: são as 30 dos denominadores (6 de recuperação e 24 de falso positivo, ADR-020) e as 3 que desviam (M3-T2, M3-T3 e M5-T2), 33 entradas no total. As 70 entradas inertes rodam **uma vez por condição**, como controle: na condição ligada, qualquer entrada de log numa entrada inerte é achado, não ruído.
+- Nas três repetições, o desfecho de cada (entrada, teste, condição) tem de ser **idêntico**. Ou seja, a classe do ADR-025, ou o resultado do Playwright na condição desligada. Se divergir, o caso é relatado como **não determinismo**, com as três observações, e não é resolvido por média nem por maioria. Na agregação do ADR-025, uma repetição divergente conta como execução separada, então o princípio "contra o mecanismo" já decide o desfecho da entrada.
+- O overhead é relatado como mediana e intervalo. Com N = 3, o intervalo é mínimo–máximo, porque percentis com três pontos não teriam significado.
+
+**Alternativas consideradas.** (a) Modo sombra na condição desligada, com as heurísticas rodando sem substituir: descartado. Isso contaminaria o controle com o custo das heurísticas e o overhead deixaria de ser medido contra a baseline real. (b) Um log único compartilhado entre os workers: descartado, porque exigiria trava ou ordem de escrita, e a ordem do arquivo passaria a depender do agendamento. (c) N = 3 também para as entradas inertes: descartado. Elas multiplicariam o tempo da rodada sem medir o mecanismo, e uma passada já basta para detectar o acionamento indevido. (d) Resolver divergência entre repetições por maioria: descartado, pelo mesmo motivo da alternativa (a) do ADR-025.
+
+**Consequência.** Ficam respondidos os pontos (1) e (3) do "Em aberto" do ADR-023. O ponto (2), quem produz o `detectionWaitMs`, continua aberto até a Camada 2. Uma divergência entre repetições não é ruído a esconder: ela entra no relato como achado de não determinismo, do alvo ou do mecanismo.
