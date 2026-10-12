@@ -1,0 +1,1 @@
+{"entryId":"M4-T4","testId":"tests/pagination.spec.ts › avança para a próxima página e exibe produtos diferentes","repetition":1,"condition":"healing-off","attempt":1,"status":"passed","durationMs":2479,"workerIndex":0,"mutation":[{"url":"/index.html","applied":true},{"url":"/catalogue/page-2.html","applied":true}],"infra":[],"invalid":false,"error":null}

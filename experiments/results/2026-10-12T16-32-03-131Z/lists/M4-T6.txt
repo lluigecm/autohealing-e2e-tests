@@ -1,0 +1,17 @@
+category-navigation.spec.ts › navega da Home para a categoria "Crime" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Historical" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Contemporary" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Health" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Biography" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Christian Fiction" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Psychology" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Art" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Autobiography" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Humor" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Travel" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Music" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "History" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Mystery" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Sequential Art" e exibe a listagem correspondente
+category-navigation.spec.ts › navega da Home para a categoria "Default" e exibe a listagem correspondente
+home.spec.ts › exibe a lista de categorias e o grid de produtos
