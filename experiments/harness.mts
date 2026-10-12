@@ -26,16 +26,17 @@
  * e as concluídas nunca rodam de novo.
  */
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { executeRun, prepareResume, readJsonl } from './runState.mts';
+import type { AttemptResult, Condition, Invocation } from './runState.mts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const CONFIG = 'experiments/harness.config.ts';
 /** Igual ao `workers` de `harness.config.ts`. */
 const WORKERS = 2;
-const CONDITIONS = ['healing-off', 'healing-on'] as const;
-type Condition = (typeof CONDITIONS)[number];
+const CONDITIONS: readonly Condition[] = ['healing-off', 'healing-on'];
 
 interface MatrixRow {
   id: string;
@@ -49,15 +50,6 @@ interface MatrixRow {
 
 interface TargetMap {
   testes: Array<{ id: string; chamadas: Array<{ alvos?: Array<{ instancia: string }> }> }>;
-}
-
-interface Invocation {
-  entryId: string;
-  group: string;
-  locator: MatrixRow['locator'];
-  condition: Condition;
-  repeatEach: number;
-  tests: string[];
 }
 
 function readJson<T>(relative: string): T {
@@ -156,13 +148,6 @@ function median(values: number[]): number | null {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-}
-
-function readJsonl(file: string): Array<Record<string, unknown>> {
-  return readFileSync(file, 'utf8')
-    .split('\n')
-    .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
 /** Todos os eventos `tests-*.jsonl` sob um diretório, recursivamente. */
@@ -325,7 +310,7 @@ function attemptPath(runDir: string, inv: Invocation, attempt: number): string {
   return path.join(runDir, inv.condition, inv.entryId, `attempt-${attempt}`);
 }
 
-function runAttempt(runDir: string, listFile: string, inv: Invocation, attempt: number) {
+function runAttempt(runDir: string, listFile: string, inv: Invocation, attempt: number): AttemptResult {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     HARNESS_ENTRY: inv.entryId,
@@ -366,10 +351,6 @@ interface RunState {
   done: Set<string>;
 }
 
-function invocationKey(inv: { entryId?: unknown; condition?: unknown }): string {
-  return `${String(inv.entryId)}|${String(inv.condition)}`;
-}
-
 function requireCleanTree(): { commit: string; dirty: boolean } {
   const state = gitState();
   if (state.dirty) {
@@ -392,134 +373,38 @@ function newRun(plan: Invocation[], costs: Costs): RunState {
   return { runDir, plan, done: new Set() };
 }
 
-/**
- * Retomada de uma rodada interrompida: mesmo commit e o plano gravado em
- * `plan.json`, não um recalculado. Uma invocação sem desfecho em
- * `outcomes.jsonl` não foi concluída. As tentativas parciais dela vão para
- * `interrompidas/<momento>/`, para auditoria, e ela roda do início. As
- * concluídas nunca rodam de novo.
- */
+/** Retomada de uma rodada interrompida: as regras estão em `prepareResume`. */
 function resumeRun(runDirArg: string): RunState {
   const runDir = path.resolve(ROOT, runDirArg);
-  const saved = JSON.parse(readFileSync(path.join(runDir, 'plan.json'), 'utf8')) as {
-    git: { commit: string };
-    plan: Invocation[];
-  };
   const git = requireCleanTree();
-  if (git.commit !== saved.git.commit) {
-    console.error(`[harness] retomada recusada: a rodada é do commit ${saved.git.commit} e o HEAD é ${git.commit}.`);
+  try {
+    const { plan: saved, done, moved } = prepareResume(runDir, git.commit);
+    console.log(
+      `Retomando ${path.relative(ROOT, runDir)}: ${done.size} concluídas, ${saved.length - done.size} pendentes` +
+        (moved.length > 0 ? `; tentativas parciais movidas para interrompidas/: ${moved.join(', ')}` : '') +
+        '.',
+    );
+    return { runDir, plan: saved, done };
+  } catch (error) {
+    console.error(`[harness] ${(error as Error).message}`);
     process.exit(3);
   }
-
-  const outcomesFile = path.join(runDir, 'outcomes.jsonl');
-  const done = new Set(existsSync(outcomesFile) ? readJsonl(outcomesFile).map(invocationKey) : []);
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const moved: string[] = [];
-  for (const inv of saved.plan.filter((candidate) => !done.has(invocationKey(candidate)))) {
-    const partial = path.join(runDir, inv.condition, inv.entryId);
-    if (existsSync(partial)) {
-      const target = path.join(runDir, 'interrompidas', stamp, inv.condition, inv.entryId);
-      mkdirSync(path.dirname(target), { recursive: true });
-      renameSync(partial, target);
-      moved.push(invocationKey(inv));
-    }
-  }
-  const aborted = path.join(runDir, 'aborted.json');
-  if (existsSync(aborted)) {
-    renameSync(aborted, path.join(runDir, `aborted-${stamp}.json`));
-  }
-  const pending = saved.plan.length - done.size;
-  appendFileSync(
-    path.join(runDir, 'resumes.jsonl'),
-    `${JSON.stringify({ at: new Date().toISOString(), commit: git.commit, done: done.size, pending, moved })}\n`,
-  );
-  console.log(`Retomando ${path.relative(ROOT, runDir)}: ${done.size} concluídas, ${pending} pendentes.`);
-  return { runDir, plan: saved.plan, done };
 }
 
-/**
- * Executa as invocações pendentes do plano. Antes de cada tentativa, pré-verifica a home; com três
- * falhas seguidas, aborta a rodada. Uma invocação com execução inválida por
- * infraestrutura roda de novo, inteira, uma única vez; continuando inválida,
- * fica não medida. Teste que falhou por outro motivo nunca é reexecutado.
- */
+/** Executa as invocações pendentes com a pré-verificação e o Playwright reais; regras em `executeRun`. */
 async function execute(run: RunState): Promise<void> {
-  const { runDir, plan, done } = run;
-  const listsDir = path.join(runDir, 'lists');
-  mkdirSync(listsDir, { recursive: true });
-
-  const unmeasured: string[] = [];
-  for (const [index, inv] of plan.entries()) {
-    if (done.has(invocationKey(inv))) {
-      continue;
-    }
-    // O `--test-list` é relativo ao `testDir`: os ids do mapa vêm com o prefixo `tests/`.
-    const listFile = path.join(listsDir, `${inv.entryId}.txt`);
-    writeFileSync(listFile, `${inv.tests.map((id) => id.replace(/^tests\//, '')).join('\n')}\n`);
-
-    let outcome: 'medida' | 'nao-medida' = 'nao-medida';
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
-      const problems = await precheck();
-      if (problems !== null) {
-        const aborted = {
-          at: new Date().toISOString(),
-          invocation: index + 1,
-          entryId: inv.entryId,
-          condition: inv.condition,
-          attempt,
-          problems,
-        };
-        writeFileSync(path.join(runDir, 'aborted.json'), `${JSON.stringify(aborted, null, 2)}\n`);
-        console.log(`Rodada ABORTADA na invocação ${index + 1}: pré-verificação falhou 3 vezes (${path.relative(ROOT, runDir)}/aborted.json)`);
-        process.exit(2);
-      }
-
-      console.log(
-        `[${index + 1}/${plan.length}] ${inv.entryId} ${inv.condition} × ${inv.tests.length} testes × ${inv.repeatEach} (tentativa ${attempt})`,
-      );
-      const result = runAttempt(runDir, listFile, inv, attempt);
-      if (result.exitCode === null || result.executions !== result.expectedExecutions) {
-        // Playwright interrompido ou sem chegar ao fim: não é desfecho de teste nem
-        // sinal de infraestrutura. A invocação fica sem desfecho e a retomada a refaz.
-        appendFileSync(
-          path.join(runDir, 'invocations.jsonl'),
-          `${JSON.stringify({ entryId: inv.entryId, condition: inv.condition, attempt, ...result, valid: false, incomplete: true })}\n`,
-        );
-        const aborted = {
-          at: new Date().toISOString(),
-          invocation: index + 1,
-          entryId: inv.entryId,
-          condition: inv.condition,
-          attempt,
-          problems: [`invocação incompleta: ${result.executions} de ${result.expectedExecutions} execuções, código de saída ${result.exitCode}`],
-        };
-        writeFileSync(path.join(runDir, 'aborted.json'), `${JSON.stringify(aborted, null, 2)}\n`);
-        console.log(`Rodada ABORTADA na invocação ${index + 1}: ${aborted.problems[0]} (${path.relative(ROOT, runDir)}/aborted.json)`);
-        process.exit(4);
-      }
-      const valid = result.invalidExecutions === 0;
-      appendFileSync(
-        path.join(runDir, 'invocations.jsonl'),
-        `${JSON.stringify({ entryId: inv.entryId, condition: inv.condition, attempt, ...result, valid })}\n`,
-      );
-      if (valid) {
-        outcome = 'medida';
-        break;
-      }
-      console.log(`  ${result.invalidExecutions} execução(ões) inválida(s) por infraestrutura`);
-    }
-
-    appendFileSync(
-      path.join(runDir, 'outcomes.jsonl'),
-      `${JSON.stringify({ entryId: inv.entryId, condition: inv.condition, outcome })}\n`,
-    );
-    if (outcome === 'nao-medida') {
-      unmeasured.push(`${inv.entryId} ${inv.condition}`);
-    }
+  const outcome = await executeRun(run, { precheck, runAttempt, log: (line) => console.log(line) });
+  const where = path.relative(ROOT, run.runDir);
+  if (outcome.status === 'aborted') {
+    console.log(`Rodada ABORTADA: ${outcome.reason} (${where}/aborted.json)`);
+    process.exit(outcome.exitCode);
   }
-
-  console.log(`Rodada concluída em ${path.relative(ROOT, runDir)}`);
-  console.log(unmeasured.length === 0 ? 'Todas as invocações desta execução medidas.' : `Não medidas: ${unmeasured.join(', ')}`);
+  console.log(`Rodada concluída em ${where}`);
+  console.log(
+    outcome.unmeasured.length === 0
+      ? 'Todas as invocações desta execução medidas.'
+      : `Não medidas: ${outcome.unmeasured.join(', ')}`,
+  );
 }
 
 const options = args();

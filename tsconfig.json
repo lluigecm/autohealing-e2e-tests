@@ -9,10 +9,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "types": ["node"]
   },
   "include": [
     "healing/**/*.ts",
+    "healing/**/*.mts",
     "pages/**/*.ts",
     "tests/**/*.ts",
     "integration/**/*.ts",

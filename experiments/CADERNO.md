@@ -241,3 +241,34 @@ A **origem não foi determinada**. Na hora, eu estava editando `experiments/harn
 | Matriz depois da correção | Bateu nas 103 entradas (`matriz-2026-10-12-b.log`) |
 | Ida e volta | 134/134 fingerprints idênticos, 0 faltando, 0 sobrando, 0 diferentes. Bytes originais com `applied: false` cobertos por unitário |
 | ADR da troca de mecanismo | ADR-029, commitado em `54af588` |
+
+**Anotação (2026-10-12).** O usuário também não sabe quem iniciou a rodada das 09:23. A **origem fica indeterminada**: nenhum dos dois reconhece a autoria. A partir de agora, `--run` e `--resume` contra o site só rodam com autorização explícita do usuário na mensagem imediatamente anterior, nunca por iniciativa própria, nem para teste.
+
+---
+
+## 2026-10-12 — Retomada e invocação incompleta testadas offline
+
+**Objetivo.** Antes da rodada principal, verificar sem tocar no site: (1) a retomada de uma rodada interrompida (ADR-030); (2) que uma invocação incompleta aborta a rodada sem desfecho e nunca é gravada como "medida", o bug da rodada das 09:23.
+
+**Ambiente.** Node v24.14.0, Playwright 1.63.0, Windows 11 Home 10.0.26200, `playwright.unit.config.ts`. Sem rede.
+
+**Commit.** Working tree sobre `e538ed3`, com as mudanças ainda não commitadas.
+
+**Mudança de código.** O laço de execução e a preparação da retomada saíram de `experiments/harness.mts` para `experiments/runState.mts`, com a pré-verificação e o Playwright injetados. O comportamento não mudou. O orquestrador liga as versões reais, e os unitários, versões falsas. No `tsconfig.json` entraram `allowImportingTsExtensions` (para o Node puro importar o `.mts`) e `healing/**/*.mts` no `include`.
+
+**Comando.** `npx playwright test --config=playwright.unit.config.ts`, com a saída em `experiments/runs/unit-completo.log`, não versionado.
+
+**Resultado.** 117/117 unitários: os 109 anteriores mais 8 novos em `healing/experiments/runState.spec.mts`, todos sobre um diretório de rodada fictício:
+
+| Caso | Resultado |
+|---|---|
+| 0 de 1 execução | Aborta com código 4, sem desfecho em `outcomes.jsonl`, tentativa gravada como `incomplete: true` e nada depois dela roda |
+| Playwright sem código de saída | Aborta, sem desfecho |
+| Inválida por infraestrutura na 1ª tentativa e incompleta na 2ª | Aborta, sem desfecho |
+| Pré-verificação falhando | Aborta com código 2 antes de rodar, sem desfecho |
+| Infraestrutura inválida nas duas tentativas | Exatamente 2 tentativas, desfecho "nao-medida" |
+| Retomada depois de interrupção na 3ª de 4 invocações | Rodam só a 3ª e a 4ª; cada invocação do plano fica com exatamente um desfecho; tentativa parcial movida para `interrompidas/<momento>/`; `aborted.json` renomeado; `resumes.jsonl` registrado |
+| Retomada com commit diferente | Recusada, sem mexer em nenhum arquivo |
+| Retomada de rodada já completa | Não roda nada e não chama a pré-verificação |
+
+**Anomalias.** Nenhuma.
