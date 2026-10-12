@@ -35,3 +35,5 @@ Thumbs.db
 
 # contexto
 contexto*
+# Rodadas do harness (a oficial é copiada para experiments/results/)
+/experiments/runs/

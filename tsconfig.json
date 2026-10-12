@@ -17,6 +17,8 @@
     "tests/**/*.ts",
     "integration/**/*.ts",
     "mutation/**/*.ts",
+    "experiments/**/*.ts",
+    "experiments/**/*.mts",
     "playwright.config.ts",
     "playwright.unit.config.ts",
     "playwright.integration.config.ts"

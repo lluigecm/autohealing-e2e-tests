@@ -17,9 +17,8 @@ import {
  * mecanismo que tenta recuperar a qualquer custo mascara defeito real, e um
  * falso positivo silencioso é pior que uma falha visível.
  *
- * Esta camada ainda **não** é acionada por uma falha real de locator: a detecção
- * (Camada 2) não está implementada. Aqui ela é alimentada diretamente com um
- * `ConfidenceResult` — da combinação real ou construído em teste.
+ * Recebe um `ConfidenceResult`, da combinação real ou construído em teste. Com
+ * `HEALING=on`, é acionada pela detecção em `withCapture` via `recoverAndAct`.
  */
 
 /**
@@ -135,6 +134,11 @@ export function clearHealingLog(): void {
   entries.length = 0;
 }
 
+/** Acrescenta ao log em memória. É o sink padrão quando ninguém injeta outro. */
+export function recordHealingLogEntry(entry: HealingLogEntry): void {
+  entries.push(entry);
+}
+
 /** Uma linha por decisão, legível por humano sem deixar de ser rastreável. */
 export function formatHealingLogEntry(entry: HealingLogEntry): string {
   const score = entry.score === null ? 'sem confiança' : entry.score.toFixed(3);
@@ -171,7 +175,7 @@ export function decide(
   options: DecideOptions = {},
 ): HealingDecision {
   const threshold = options.threshold ?? CONFIDENCE_THRESHOLD;
-  const record = options.record ?? ((entry: HealingLogEntry) => entries.push(entry));
+  const record = options.record ?? recordHealingLogEntry;
   const now = options.now ?? (() => new Date());
 
   const confident =

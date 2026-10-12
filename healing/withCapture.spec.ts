@@ -4,7 +4,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { Fingerprint } from './fingerprint';
 import { fingerprintPath } from './fingerprintStore';
-import { persistFingerprint } from './withCapture';
+import { persistFingerprint, withCapture } from './withCapture';
 
 const CONTEXT = { selector: 'role=link[name=next]', url: '/index.html' };
 
@@ -93,6 +93,17 @@ test.describe('interruptor HEALING_CAPTURE=off', () => {
 
     expect(await readdir(capturedDir)).toEqual([]);
     expect(warnings).toEqual([]);
+  });
+
+  test('não extrai: locator ausente não espera o timeout da extração', async ({ page }) => {
+    process.env.HEALING_CAPTURE = 'off';
+    await page.setContent('<p>sem o alvo</p>');
+
+    const inicio = Date.now();
+    await withCapture(page, 'css=#ausente', page.locator('#ausente'), async () => 'ok');
+
+    // Com a extração, a chamada esperaria CAPTURE_TIMEOUT_MS (5 s) antes da ação.
+    expect(Date.now() - inicio).toBeLessThan(2_000);
   });
 
   test('qualquer outro valor mantém a captura ligada', async () => {

@@ -1,4 +1,6 @@
 import { Locator, Page } from '@playwright/test';
+import { performance } from 'perf_hooks';
+import { recoverAndAct } from './decision/recovery';
 import { Fingerprint } from './fingerprint';
 import { saveFingerprint } from './fingerprintStore';
 
@@ -89,22 +91,26 @@ async function extractFingerprint(
   }
 }
 
+/** `HEALING_CAPTURE=off` desliga a captura. Lida a cada chamada para que os testes possam alterná-la. */
+function captureEnabled(): boolean {
+  return process.env.HEALING_CAPTURE !== 'off';
+}
+
 /**
  * Grava o fingerprint extraído. Um `null` (extração falhou) é reportado via
  * `console.warn` em vez de ignorado: na Camada 2, "não capturou porque o
  * elemento genuinamente não existia" e "não capturou por bug na extração"
  * seriam indistinguíveis sem esse log.
  *
- * `HEALING_CAPTURE=off` desliga a gravação, e só ela: a extração e a assinatura
- * de `withCapture` não mudam. Sob DOM mutado, uma ação que ainda funcione
- * sobrescreveria o baseline versionado em `healing/fingerprints/` com dados
- * mutados. Lida a cada chamada para que os testes possam alterná-la.
+ * Com `HEALING_CAPTURE=off` não grava nada: sob DOM mutado, uma ação que ainda
+ * funcione sobrescreveria o baseline versionado em `healing/fingerprints/` com
+ * dados mutados.
  */
 export async function persistFingerprint(
   fingerprint: Fingerprint | null,
   context: CaptureContext,
 ): Promise<void> {
-  if (process.env.HEALING_CAPTURE === 'off') {
+  if (!captureEnabled()) {
     return;
   }
 
@@ -123,6 +129,16 @@ export async function persistFingerprint(
 }
 
 /**
+ * `HEALING=on` liga a recuperação; qualquer outro valor, inclusive ausente,
+ * mantém o comportamento sem healing. Desligado por padrão: ligado, a suíte
+ * baseline curaria em silêncio uma regressão real. Lida a cada chamada, no
+ * mesmo padrão de `HEALING_CAPTURE`.
+ */
+function healingEnabled(): boolean {
+  return process.env.HEALING === 'on';
+}
+
+/**
  * Ponto de extensão único entre os Page Objects e o `Locator` do Playwright.
  *
  * A ordem é extrair → agir → persistir:
@@ -132,8 +148,13 @@ export async function persistFingerprint(
  *    semântica de "fingerprint de interação bem-sucedida", não apenas de
  *    elemento localizado.
  *
- * Na Camada 2, `action(locator)` passa a ser envolvido num try/catch: falhou,
- * aciona a recuperação; funcionou, persiste como hoje.
+ * Com `HEALING=on`, a falha da ação passa pela detecção: só conta como locator
+ * quebrado se, depois da exceção, o locator não resolve nenhum elemento. Com o
+ * elemento presente (um ou vários), a falha não é de localização e o erro
+ * original segue. A detecção é por exceção, sem checagem prévia: `isVisible()`
+ * sobre um elemento que legitimamente não existe devolve `false` e nunca
+ * aciona a recuperação. Uma ação recuperada não persiste fingerprint: o
+ * elemento achado pela heurística não é o que o seletor original descreve.
  */
 export async function withCapture<T>(
   page: Page,
@@ -144,9 +165,28 @@ export async function withCapture<T>(
   // A URL é lida antes da ação: um clique de navegação já teria trocado a página.
   const context: CaptureContext = { selector: description, url: new URL(page.url()).pathname };
 
-  const fingerprint = await extractFingerprint(context, locator);
-  const result = await action(locator);
-  await persistFingerprint(fingerprint, context);
+  // A extração só serve à persistência. Com a captura desligada ela seria custo
+  // puro: sobre um locator quebrado, espera até CAPTURE_TIMEOUT_MS antes da ação.
+  const fingerprint = captureEnabled() ? await extractFingerprint(context, locator) : null;
 
+  if (!healingEnabled()) {
+    const result = await action(locator);
+    await persistFingerprint(fingerprint, context);
+    return result;
+  }
+
+  const start = performance.now();
+  let result: T;
+  try {
+    result = await action(locator);
+  } catch (error) {
+    const detectionWaitMs = performance.now() - start;
+    const resolved = await locator.count().catch(() => null);
+    if (resolved !== 0) {
+      throw error;
+    }
+    return recoverAndAct(page, { key: context, error, detectionWaitMs }, action);
+  }
+  await persistFingerprint(fingerprint, context);
   return result;
 }

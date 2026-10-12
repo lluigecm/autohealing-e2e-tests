@@ -3,10 +3,11 @@ import { appendFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { performance } from 'perf_hooks';
 import { Fingerprint } from '../fingerprint';
+import { loadFingerprint } from '../fingerprintStore';
 import { matchByStableAttributes } from '../heuristics/attributeHeuristic';
 import { matchByStructuralSimilarity } from '../heuristics/structuralHeuristic';
 import { combineConfidence } from './confidenceScore';
-import { HealingDecision, HealingLogEntry, RunContext, decide } from './decide';
+import { HealingDecision, HealingLogEntry, RunContext, decide, recordHealingLogEntry } from './decide';
 
 /**
  * Uma tentativa de recuperação instrumentada para o harness de experimentos:
@@ -17,8 +18,8 @@ import { HealingDecision, HealingLogEntry, RunContext, decide } from './decide';
  * antes da ação, porque a ação pode navegar e descartar o DOM mutado. O log é
  * escrito só no fim, depois da ação, e nunca é lido durante a execução.
  *
- * A detecção (Camada 2) não existe ainda: quem chama informa a espera da
- * detecção e decide qual ação executar com o candidato.
+ * A detecção (Camada 2) mora em `withCapture`, que chama `recoverAndAct` com a
+ * espera até a falha e a ação a repetir sobre o candidato.
  */
 
 export interface RecoveryOptions {
@@ -72,18 +73,20 @@ export async function attemptRecovery(
   return { decision, candidate: confidence.locator, recoveryMs, candidateIsOracle };
 }
 
-export interface ActionTiming {
+export interface ActionTiming<T = unknown> {
   /** `null` quando a decisão foi `fail` e não houve ação recuperada. */
   actionMs: number | null;
   /** Erro da ação recuperada, devolvido em vez de lançado para que a entrada seja gravada mesmo assim. */
   error: unknown;
+  /** Valor devolvido pela ação recuperada; `undefined` quando ela não rodou ou falhou. */
+  value?: T;
 }
 
 /** Executa e cronometra a ação com o candidato, só quando a decisão foi `replace`. */
-export async function timeRecoveredAction(
+export async function timeRecoveredAction<T>(
   attempt: RecoveryAttempt,
-  action: (locator: Locator) => Promise<unknown>,
-): Promise<ActionTiming> {
+  action: (locator: Locator) => Promise<T>,
+): Promise<ActionTiming<T>> {
   const locator = attempt.decision.locator;
   if (locator === null) {
     return { actionMs: null, error: null };
@@ -91,8 +94,8 @@ export async function timeRecoveredAction(
 
   const start = performance.now();
   try {
-    await action(locator);
-    return { actionMs: performance.now() - start, error: null };
+    const value = await action(locator);
+    return { actionMs: performance.now() - start, error: null, value };
   } catch (error) {
     return { actionMs: performance.now() - start, error };
   }
@@ -100,7 +103,7 @@ export async function timeRecoveredAction(
 
 export function completeEntry(
   attempt: RecoveryAttempt,
-  run: RunContext,
+  run: RunContext | null,
   measured: { detectionWaitMs: number; actionMs: number | null },
 ): HealingLogEntry {
   return {
@@ -135,4 +138,79 @@ export function jsonlSink(filePath: string): HealingLogSink {
       appendFileSync(resolved, `${JSON.stringify(entry)}\n`, 'utf8');
     },
   };
+}
+
+/**
+ * O que o harness injeta na recuperação acionada por `withCapture`. Nada aqui
+ * muda a decisão: o oráculo só preenche `candidateIsOracle`, o sink e o
+ * contexto só dizem onde e como registrar.
+ */
+export interface HealingRuntime {
+  oracle?: (candidate: Locator) => Promise<boolean>;
+  /** Sem sink, a entrada vai para o log em memória (`healingLog()`). */
+  sink?: HealingLogSink;
+  /** Lido a cada tentativa; `null` fora do harness. */
+  run?: () => RunContext | null;
+  threshold?: number;
+}
+
+let runtime: HealingRuntime = {};
+
+export function configureHealing(next: HealingRuntime): void {
+  runtime = next;
+}
+
+/** Locator quebrado em `withCapture`: o que a Camada 2 sabia no momento da falha. */
+export interface DetectedFailure {
+  /** Chave do fingerprint de baseline: pathname da página e descrição do locator. */
+  key: { url: string; selector: string };
+  error: unknown;
+  detectionWaitMs: number;
+}
+
+/** Anexa a tentativa ao erro original sem trocá-lo: o teste falha como falharia sem healing. */
+function withHealingCause(error: unknown, cause: unknown): unknown {
+  // `lib` do tsconfig é ES2021, anterior ao tipo de `Error.cause`.
+  const target = error as Error & { cause?: unknown };
+  if (error instanceof Error && target.cause === undefined) {
+    target.cause = cause;
+  }
+  return error;
+}
+
+/**
+ * Recuperação acionada pela detecção: fingerprint de baseline → tentativa →
+ * ação com o candidato → entrada completa no sink. Devolve o valor da ação
+ * recuperada, ou lança o erro **original**, com a tentativa como `cause`,
+ * quando não há fingerprint, quando a decisão é `fail` ou quando a ação
+ * recuperada falha.
+ */
+export async function recoverAndAct<T>(
+  page: Page,
+  failure: DetectedFailure,
+  action: (locator: Locator) => Promise<T>,
+): Promise<T> {
+  const fingerprint = await loadFingerprint(failure.key);
+  if (fingerprint === null) {
+    throw withHealingCause(failure.error, { healing: 'sem fingerprint de baseline', key: failure.key });
+  }
+
+  const attempt = await attemptRecovery(page, fingerprint, {
+    oracle: runtime.oracle,
+    threshold: runtime.threshold,
+  });
+  const timing = await timeRecoveredAction(attempt, action);
+  const entry = completeEntry(attempt, runtime.run?.() ?? null, {
+    detectionWaitMs: failure.detectionWaitMs,
+    actionMs: timing.actionMs,
+  });
+  (runtime.sink ? (e: HealingLogEntry) => runtime.sink!.write(e) : recordHealingLogEntry)(entry);
+
+  if (attempt.decision.decision === 'fail') {
+    throw withHealingCause(failure.error, { healing: 'fail', score: entry.score, reason: entry.reason });
+  }
+  if (timing.error !== null) {
+    throw withHealingCause(failure.error, { healing: 'replace', candidate: entry.candidate, actionError: timing.error });
+  }
+  return timing.value as T;
 }

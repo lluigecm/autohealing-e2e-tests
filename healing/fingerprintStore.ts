@@ -1,4 +1,4 @@
-import { mkdir, rename, unlink, writeFile } from 'fs/promises';
+import { mkdir, readFile, rename, unlink, writeFile } from 'fs/promises';
 import path from 'path';
 import { Fingerprint } from './fingerprint';
 
@@ -44,5 +44,20 @@ export async function saveFingerprint(fingerprint: Fingerprint): Promise<void> {
     // rename colidir (bloqueio momentâneo no Windows), a escrita direta resolve.
     await writeFile(target, content, 'utf8');
     await unlink(temp).catch(() => undefined);
+  }
+}
+
+/**
+ * Lê o fingerprint de baseline do par (página, seletor). `null` quando não há
+ * arquivo: um locator nunca capturado não tem do que se recuperar.
+ */
+export async function loadFingerprint(key: Pick<Fingerprint, 'url' | 'selector'>): Promise<Fingerprint | null> {
+  try {
+    return JSON.parse(await readFile(fingerprintPath(key), 'utf8')) as Fingerprint;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
   }
 }
