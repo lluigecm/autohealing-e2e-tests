@@ -1,0 +1,2 @@
+# Resultados oficiais das rodadas: bytes exatos, sem conversão de fim de linha.
+experiments/results/** -text
