@@ -158,36 +158,44 @@ function readJsonl(file: string): Array<Record<string, unknown>> {
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
-/** Durações medidas numa rodada anterior: medianas de passou/falhou e da inicialização por invocação. */
+/** Todos os eventos `tests-*.jsonl` sob um diretório, recursivamente. */
+function testEvents(dir: string): Array<Record<string, unknown>> {
+  if (!existsSync(dir)) {
+    return [];
+  }
+  return readdirSync(dir, { recursive: true, encoding: 'utf8' })
+    .filter((name) => path.basename(name).startsWith('tests-') && name.endsWith('.jsonl'))
+    .flatMap((name) => readJsonl(path.join(dir, name)));
+}
+
+/**
+ * Durações medidas numa rodada anterior: medianas de passou/falhou e da
+ * inicialização por invocação. Execuções inválidas por infraestrutura ficam fora.
+ */
 function calibrate(runDir: string, fallback: Costs): Costs {
   const passed: number[] = [];
   const failed: number[] = [];
-  for (const condition of CONDITIONS) {
-    const dir = path.join(runDir, condition);
-    if (!existsSync(dir)) {
-      continue;
-    }
-    for (const file of readdirSync(dir).filter((name) => name.startsWith('tests-'))) {
-      for (const event of readJsonl(path.join(dir, file))) {
-        (event.status === 'passed' ? passed : failed).push(Number(event.durationMs) / 1000);
-      }
+  for (const event of testEvents(runDir)) {
+    if (event.invalid !== true) {
+      (event.status === 'passed' ? passed : failed).push(Number(event.durationMs) / 1000);
     }
   }
   const startups: number[] = [];
   const invocationsFile = path.join(runDir, 'invocations.jsonl');
   if (existsSync(invocationsFile)) {
     for (const inv of readJsonl(invocationsFile)) {
-      if (typeof inv.wallMs === 'number' && typeof inv.testsMs === 'number') {
+      if (inv.valid === true && typeof inv.wallMs === 'number' && typeof inv.testsMs === 'number') {
         startups.push((inv.wallMs - inv.testsMs / WORKERS) / 1000);
       }
     }
   }
   const perTest = median(passed) ?? fallback.perTestS;
   const failedMedian = median(failed);
+  const round = (value: number) => Math.round(value * 10) / 10;
   return {
-    perTestS: perTest,
-    brokenExtraS: failedMedian === null ? fallback.brokenExtraS : Math.max(0, failedMedian - perTest),
-    startupS: median(startups) ?? fallback.startupS,
+    perTestS: round(perTest),
+    brokenExtraS: round(failedMedian === null ? fallback.brokenExtraS : Math.max(0, failedMedian - perTest)),
+    startupS: round(median(startups) ?? fallback.startupS),
     source: `calibrado em ${path.relative(ROOT, runDir)} (${passed.length} passaram, ${failed.length} falharam, ${startups.length} invocações)`,
   };
 }
@@ -252,67 +260,151 @@ function gitState(): { commit: string; dirty: boolean } {
   return { commit, dirty: status.length > 0 };
 }
 
-function execute(plan: Invocation[], costs: Costs): void {
+const HOME_URL = 'https://books.toscrape.com/index.html';
+const HOME_TITLE = 'All products | Books to Scrape - Sandbox';
+/** Esperas entre as tentativas da pré-verificação: 3 tentativas no total. */
+const PRECHECK_WAITS_MS = [15_000, 60_000];
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Home com status 200 e o título esperado. Devolve o motivo da falha, ou `null`. */
+async function homeProblem(): Promise<string | null> {
+  try {
+    const response = await fetch(HOME_URL, { signal: AbortSignal.timeout(15_000) });
+    if (response.status !== 200) {
+      return `status ${response.status}`;
+    }
+    const raw = (await response.text()).match(/<title>([\s\S]*?)<\/title>/i)?.[1] ?? '';
+    const title = raw.replace(/\s+/g, ' ').trim();
+    return title === HOME_TITLE ? null : `título inesperado: ${JSON.stringify(title)}`;
+  } catch (error) {
+    return `requisição falhou: ${String(error)}`;
+  }
+}
+
+/** Até 3 tentativas com espera. Devolve as falhas se todas falharem, ou `null`. */
+async function precheck(): Promise<string[] | null> {
+  const problems: string[] = [];
+  for (let attempt = 0; attempt <= PRECHECK_WAITS_MS.length; attempt += 1) {
+    const problem = await homeProblem();
+    if (problem === null) {
+      return null;
+    }
+    problems.push(`${new Date().toISOString()} ${problem}`);
+    console.log(`[pré-verificação] falhou: ${problem}`);
+    if (attempt < PRECHECK_WAITS_MS.length) {
+      await sleep(PRECHECK_WAITS_MS[attempt]);
+    }
+  }
+  return problems;
+}
+
+/** Diretório de uma tentativa; o mesmo de `attemptDir` em `harnessEnv.ts`. */
+function attemptPath(runDir: string, inv: Invocation, attempt: number): string {
+  return path.join(runDir, inv.condition, inv.entryId, `attempt-${attempt}`);
+}
+
+function runAttempt(runDir: string, listFile: string, inv: Invocation, attempt: number) {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    HARNESS_ENTRY: inv.entryId,
+    HARNESS_CONDITION: inv.condition,
+    HARNESS_RUN_DIR: runDir,
+    HARNESS_ATTEMPT: String(attempt),
+  };
+  // Condição desligada = baseline intocada: `HEALING` fica ausente, não `off`.
+  delete env.HEALING;
+  if (inv.condition === 'healing-on') {
+    env.HEALING = 'on';
+  }
+
+  const cli = createRequire(import.meta.url).resolve('@playwright/test/cli');
+  const start = Date.now();
+  const result = spawnSync(
+    process.execPath,
+    [cli, 'test', '--config', CONFIG, '--test-list', listFile, '--repeat-each', String(inv.repeatEach)],
+    { cwd: ROOT, env, stdio: 'inherit' },
+  );
+  const wallMs = Date.now() - start;
+
+  const events = testEvents(attemptPath(runDir, inv, attempt));
+  return {
+    exitCode: result.status,
+    wallMs,
+    testsMs: events.reduce((sum, event) => sum + Number(event.durationMs), 0),
+    executions: events.length,
+    expectedExecutions: inv.tests.length * inv.repeatEach,
+    invalidExecutions: events.filter((event) => event.invalid === true).length,
+  };
+}
+
+/**
+ * Executa o plano. Antes de cada tentativa, pré-verifica a home; com três
+ * falhas seguidas, aborta a rodada. Uma invocação com execução inválida por
+ * infraestrutura roda de novo, inteira, uma única vez; continuando inválida,
+ * fica não medida. Teste que falhou por outro motivo nunca é reexecutado.
+ */
+async function execute(plan: Invocation[], costs: Costs): Promise<void> {
   const runId = new Date().toISOString().replace(/[:.]/g, '-');
   const runDir = path.join(ROOT, 'experiments', 'runs', runId);
   const listsDir = path.join(runDir, 'lists');
   mkdirSync(listsDir, { recursive: true });
   writeFileSync(
     path.join(runDir, 'plan.json'),
-    `${JSON.stringify({ runId, git: gitState(), workers: WORKERS, costs, plan }, null, 2)}\n`,
+    `${JSON.stringify({ runId, git: gitState(), node: process.version, workers: WORKERS, costs, plan }, null, 2)}\n`,
   );
+  console.log(`Rodada ${runId}`);
 
-  const cli = createRequire(import.meta.url).resolve('@playwright/test/cli');
-  plan.forEach((inv, index) => {
+  const unmeasured: string[] = [];
+  for (const [index, inv] of plan.entries()) {
     // O `--test-list` é relativo ao `testDir`: os ids do mapa vêm com o prefixo `tests/`.
     const listFile = path.join(listsDir, `${inv.entryId}.txt`);
     writeFileSync(listFile, `${inv.tests.map((id) => id.replace(/^tests\//, '')).join('\n')}\n`);
 
-    const env: NodeJS.ProcessEnv = {
-      ...process.env,
-      HARNESS_ENTRY: inv.entryId,
-      HARNESS_CONDITION: inv.condition,
-      HARNESS_RUN_DIR: runDir,
-    };
-    // Condição desligada = baseline intocada: `HEALING` fica ausente, não `off`.
-    delete env.HEALING;
-    if (inv.condition === 'healing-on') {
-      env.HEALING = 'on';
-    }
-
-    console.log(`[${index + 1}/${plan.length}] ${inv.entryId} ${inv.condition} × ${inv.tests.length} testes × ${inv.repeatEach}`);
-    const start = Date.now();
-    const result = spawnSync(
-      process.execPath,
-      [cli, 'test', '--config', CONFIG, '--test-list', listFile, '--repeat-each', String(inv.repeatEach)],
-      { cwd: ROOT, env, stdio: 'inherit' },
-    );
-    const wallMs = Date.now() - start;
-
-    const testsMs = sumDurations(runDir, inv);
-    appendFileSync(
-      path.join(runDir, 'invocations.jsonl'),
-      `${JSON.stringify({ entryId: inv.entryId, condition: inv.condition, exitCode: result.status, wallMs, testsMs })}\n`,
-    );
-  });
-  console.log(`Rodada em ${path.relative(ROOT, runDir)}`);
-}
-
-/** Soma das durações que o reporter gravou para esta invocação. */
-function sumDurations(runDir: string, inv: Invocation): number {
-  const dir = path.join(runDir, inv.condition);
-  if (!existsSync(dir)) {
-    return 0;
-  }
-  let sum = 0;
-  for (const file of readdirSync(dir).filter((name) => name.startsWith('tests-'))) {
-    for (const event of readJsonl(path.join(dir, file))) {
-      if (event.entryId === inv.entryId) {
-        sum += Number(event.durationMs);
+    let outcome: 'medida' | 'nao-medida' = 'nao-medida';
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const problems = await precheck();
+      if (problems !== null) {
+        const aborted = {
+          at: new Date().toISOString(),
+          invocation: index + 1,
+          entryId: inv.entryId,
+          condition: inv.condition,
+          attempt,
+          problems,
+        };
+        writeFileSync(path.join(runDir, 'aborted.json'), `${JSON.stringify(aborted, null, 2)}\n`);
+        console.log(`Rodada ABORTADA na invocação ${index + 1}: pré-verificação falhou 3 vezes (${path.relative(ROOT, runDir)}/aborted.json)`);
+        process.exit(2);
       }
+
+      console.log(
+        `[${index + 1}/${plan.length}] ${inv.entryId} ${inv.condition} × ${inv.tests.length} testes × ${inv.repeatEach} (tentativa ${attempt})`,
+      );
+      const result = runAttempt(runDir, listFile, inv, attempt);
+      const valid = result.invalidExecutions === 0;
+      appendFileSync(
+        path.join(runDir, 'invocations.jsonl'),
+        `${JSON.stringify({ entryId: inv.entryId, condition: inv.condition, attempt, ...result, valid })}\n`,
+      );
+      if (valid) {
+        outcome = 'medida';
+        break;
+      }
+      console.log(`  ${result.invalidExecutions} execução(ões) inválida(s) por infraestrutura`);
+    }
+
+    appendFileSync(
+      path.join(runDir, 'outcomes.jsonl'),
+      `${JSON.stringify({ entryId: inv.entryId, condition: inv.condition, outcome })}\n`,
+    );
+    if (outcome === 'nao-medida') {
+      unmeasured.push(`${inv.entryId} ${inv.condition}`);
     }
   }
-  return sum;
+
+  console.log(`Rodada concluída em ${path.relative(ROOT, runDir)}`);
+  console.log(unmeasured.length === 0 ? 'Todas as invocações medidas.' : `Não medidas: ${unmeasured.join(', ')}`);
 }
 
 const options = args();
@@ -328,7 +420,7 @@ const calibrateFrom = options.get('calibrate-from');
 const costs = typeof calibrateFrom === 'string' ? calibrate(path.resolve(ROOT, calibrateFrom), defaults) : defaults;
 
 if (options.get('run') === true) {
-  execute(plan, costs);
+  await execute(plan, costs);
 } else {
   simulate(plan, costs);
 }

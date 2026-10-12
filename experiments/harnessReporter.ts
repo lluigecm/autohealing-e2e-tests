@@ -1,7 +1,15 @@
 import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter';
 import { appendFileSync, mkdirSync } from 'fs';
 import path from 'path';
-import { harnessTestId, HarnessEnv, MUTATION_ANNOTATION, readHarnessEnv, workerFile } from './harnessEnv';
+import {
+  harnessTestId,
+  HarnessEnv,
+  INFRA_ANNOTATION,
+  InfraSignal,
+  MUTATION_ANNOTATION,
+  readHarnessEnv,
+  workerFile,
+} from './harnessEnv';
 
 /**
  * Grava, por worker e condição, o resultado e a duração de cada teste vindos do
@@ -18,9 +26,10 @@ class HarnessReporter implements Reporter {
 
   onTestEnd(test: TestCase, result: TestResult): void {
     const annotations = result.annotations.length > 0 ? result.annotations : test.annotations;
-    const mutation = annotations
-      .filter((annotation) => annotation.type === MUTATION_ANNOTATION)
-      .map((annotation) => JSON.parse(annotation.description ?? 'null') as { url: string; applied: boolean | null });
+    const parsed = <T>(type: string) =>
+      annotations.filter((annotation) => annotation.type === type).map((annotation) => JSON.parse(annotation.description ?? 'null') as T);
+    const mutation = parsed<{ url: string; applied: boolean | null }>(MUTATION_ANNOTATION);
+    const infra = parsed<InfraSignal>(INFRA_ANNOTATION);
 
     const event = {
       entryId: this.env.entryId,
@@ -28,10 +37,14 @@ class HarnessReporter implements Reporter {
       testId: harnessTestId(test.location.file, test.titlePath().slice(3)),
       repetition: test.repeatEachIndex + 1,
       condition: this.env.condition,
+      attempt: this.env.attempt,
       status: result.status,
       durationMs: result.duration,
       workerIndex: result.workerIndex,
       mutation,
+      infra,
+      /** Inválida por infraestrutura: só por sinal estruturado, nunca pela mensagem de erro. */
+      invalid: infra.length > 0,
       error: result.error?.message?.split('\n')[0] ?? null,
     };
 

@@ -596,3 +596,30 @@ A diferença de duração nos testes quebrados não é usada como overhead, porq
 - **Limiar.** Fica fixo em 0.7 (`CONFIDENCE_THRESHOLD`) na rodada principal. Outros limiares só entram como **análise de sensibilidade offline**, recalculada a partir do log (`rawScore`, `factors`), rotulada como secundária e aproximada. É aproximada porque, com outro limiar, uma substituição diferente mudaria o resto do teste, e o log só registra o caminho que o 0.7 produziu.
 - **Extração do fingerprint.** Com `HEALING_CAPTURE=off`, `withCapture` não extrai mais o fingerprint. A extração só servia à persistência, que está desligada, e custava até 5 s por locator quebrado nas duas condições. A mudança é igual nas duas condições, e o `detectionWaitMs` (início da ação até a exceção) não a inclui.
 - **Resultados versionados.** As rodadas são gravadas em `experiments/runs/`, que é ignorado pelo git. A rodada principal oficial é copiada **sem edição** para `experiments/results/<rodada>/` e versionada.
+- **O que o piloto pode mudar.** Um bug revelado pelo piloto pode ser corrigido, com registro no caderno de experimentos (`experiments/CADERNO.md`). O limiar, as penalidades, os pesos e os fatores de corroboração **não mudam** com base no piloto: ajustá-los ao que o piloto mostrou seria calibrar o mecanismo nos próprios dados de avaliação.
+
+---
+
+## ADR-028 — Proteção contra falha de infraestrutura no harness
+
+**Data:** 2026-10-12 · **Etapa:** harness dos experimentos (item 7), antes do piloto · **Status:** aceito; fixado antes de qualquer execução do harness contra o site
+
+**Contexto.** Na verificação dos 66 E2E de 2026-10-11 (caderno de experimentos), uma execução teve 56 falhas rápidas, e as três seguintes, sem nenhuma mudança, passaram inteiras. O motivo se perdeu, mas o padrão é de infraestrutura (rede ou site), não de código. Na rodada principal, uma falha assim seria lida como desfecho do mecanismo: na condição desligada viraria "teste falhou"; na ligada, "não recuperou". Ela contaminaria as duas taxas sem que nada no log a distinguisse.
+
+**Decisão.**
+
+*Pré-verificação antes de cada invocação.* O orquestrador faz um GET em `/index.html` e exige status 200 e o título `All products | Books to Scrape - Sandbox` (com espaços normalizados). São até 3 tentativas, com esperas de 15 s e 60 s entre elas. Se as três falharem, a rodada é **abortada**: o orquestrador grava `aborted.json` no diretório da rodada, com o motivo e a invocação em que parou, e termina com código 2. O aborto é registrado no caderno. Uma rodada abortada não vira oficial, e a rodada seguinte começa do zero. A pré-verificação vale também antes de uma reexecução.
+
+*Execução inválida por infraestrutura.* Só sinais estruturados do Playwright classificam uma execução de teste como inválida. Eles são observados no contexto do teste, nas duas condições:
+- falha de navegação do documento principal: evento `requestfailed` de uma requisição de navegação do frame principal;
+- status HTTP de erro no `goto`: resposta com status ≥ 400 para a navegação do frame principal disparada pelo `goto` dos Page Objects.
+
+Cada sinal vira anotação do teste com o tipo, a URL e o status ou o código de falha da requisição. O código fica só como registro: a classificação vem do evento, não do texto. A mensagem de erro do teste **nunca** classifica nada.
+
+*Reexecução.* Uma invocação com qualquer execução inválida roda **de novo, inteira, uma única vez**: mesma entrada, condição, lista de testes e repetições. Se a segunda tentativa também tiver execução inválida, a invocação fica **não medida**. Uma entrada com qualquer uma das suas duas invocações não medida é **não medida** e é relatada assim, pelo id, fora de todos os numeradores e denominadores. Um teste que falhou sem sinal de infraestrutura **nunca** é reexecutado, nem isolado nem dentro de uma reexecução por outro motivo. O desfecho dele é dado.
+
+*Arquivos.* Cada tentativa grava em diretório próprio, `<rodada>/<condição>/<entrada>/attempt-<n>/`, com os `.jsonl` por worker do ADR-026 dentro. A análise usa só a última tentativa de cada invocação, e as anteriores ficam para auditoria. O `invocations.jsonl` da rodada registra cada tentativa, se ela foi inválida e o desfecho final da invocação: medida ou não medida.
+
+**Alternativas consideradas.** (a) Classificar pela mensagem de erro (`net::`, `ERR_`, `timeout`): descartado, porque mensagem não é contrato e um timeout de locator quebrado tem a mesma cara de um timeout de rede. (b) Reexecutar só os testes inválidos: descartado. A invocação mistura testes num mesmo processo e mesmos workers, e reexecutar pedaços daria mais de uma chance a parte dos testes e dividiria a medição de tempo. (c) Reexecutar até passar: descartado, porque escolheria a tentativa pelo resultado. (d) Descartar a rodada inteira a cada execução inválida: descartado, porque uma oscilação de segundos em 3 h de rodada desperdiçaria a rodada.
+
+**Consequência.** Toda navegação do frame principal que falha conta como infraestrutura, inclusive uma interrompida por outra navegação (`net::ERR_ABORTED`). Isso é conservador: no pior caso, uma entrada fica não medida em vez de medida errada. Se isso acontecer de forma sistemática numa entrada, a ocorrência aparece no piloto ou no caderno, e a causa é investigada antes de se mexer no critério.

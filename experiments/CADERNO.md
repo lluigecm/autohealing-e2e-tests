@@ -59,3 +59,25 @@ Depois das quatro execuções, `healing/fingerprints/` estava inalterado: 134 ar
 | Com a extração pulada sob `HEALING_CAPTURE=off` (+5 s) | **3h09min** |
 
 A segunda linha reflete a mudança registrada no adendo do ADR-027.
+
+---
+
+## 2026-10-12 — Verificação offline dos sinais de infraestrutura
+
+**Objetivo.** Confirmar, antes do piloto, que a proteção do ADR-028 dispara pelos sinais estruturados e só por eles.
+
+**Ambiente.** O mesmo das entradas anteriores. O DOM vem de `page.route`, sem acesso ao site.
+
+**Commit.** Working tree sobre `e4846cf`, com a proteção ainda não commitada. Ela entra no commit seguinte.
+
+**Comando.** Spec descartável, carregando `installHarness()` com `HARNESS_ENTRY=M4-T5`, `HARNESS_CONDITION=healing-off` e um diretório de rodada temporário. O spec foi apagado depois e não é versionado.
+
+**Resultado.** 3/3:
+
+| Caso | Sinal registrado |
+|---|---|
+| `HomePage.goto()` recebendo status 500 | `http-error` |
+| `HomePage.goto()` com a requisição abortada | `navigation-failed` |
+| `goto` normal seguido de clique numa página que responde 404 | nenhum, porque o status só conta no `goto` |
+
+**Anomalias.** Nenhuma.
