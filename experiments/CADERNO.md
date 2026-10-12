@@ -175,3 +175,42 @@ São 8 invocações e 236 execuções, 118 por condição.
 Os logs estão em `experiments/runs/`, que é ignorado pelo git.
 
 **Anomalias.** Nenhuma além das que motivaram esta correção.
+
+---
+
+## 2026-10-12 — Segundo piloto, com a injeção do ADR-029
+
+**Objetivo.** Confirmar que a nova injeção eliminou a corrida revelada no primeiro piloto (critério: **0/96 passando no M1-T8 com healing desligado**) e recalibrar o tempo da rodada principal. **Os dados deste piloto não entram nos resultados** (adendo do ADR-027), e as quatro entradas rodam de novo na rodada principal.
+
+**Entradas.** As mesmas do primeiro piloto: M1-T8 (32 × 3), M2-T1-travel_2-relabel (1 × 3), M5-T1-crime_51 (1 × 3) e M4-T5 (16 × 1). São 8 invocações e 236 execuções.
+
+**Ambiente.** O do primeiro piloto: Node v24.14.0, Playwright 1.63.0, Windows 11 Home 10.0.26200, `experiments/harness.config.ts` com 2 workers, `actionTimeout` de 5 s e `retries: 0`.
+
+**Commit.** `54af588`. O `plan.json` marca `dirty: true` só por causa da exclusão de `experiments/.gitkeep` e `mutation/.gitkeep`, fora do commit.
+
+**Comando.** `node experiments/harness.mts --run --entries M1-T8,M2-T1-travel_2-relabel,M5-T1-crime_51,M4-T5`. Saída completa em `experiments/runs/piloto2.log`. Rodada `experiments/runs/2026-10-12T11-34-21-965Z/`, não versionada.
+
+**Duração real.** 14min47s (08:34:21 a 08:49:08, horário local).
+
+**Resultado resumido** (verificação do harness, não é resultado experimental):
+
+| Entrada | Healing desligado | Healing ligado |
+|---|---|---|
+| M1-T8 | **0/96 passando** (no primeiro piloto: 3/96) | 96/96 sucesso: `replace`, oráculo certo, teste passa |
+| M2-T1-travel_2-relabel | 0/3 passando | 3/3 `fail`, score 0,50 |
+| M5-T1-crime_51 | 0/3 passando | 3/3 `fail`, score 0,194 (sem falso positivo) |
+| M4-T5 (inerte) | 16/16 passando | 16/16 passando, mecanismo não acionado |
+
+- `applied: true` em todas as 236 execuções, 0 execuções inválidas por infraestrutura, todas as invocações medidas na primeira tentativa.
+- Nenhuma divergência entre repetições.
+- Medianas: `detectionWaitMs` de 5,0 s, `recoveryMs` de 19 ms (13 a 60 ms), `actionMs` de 3 ms.
+
+**Estimativa de tempo.**
+
+| | Custos | Piloto | Rodada principal |
+|---|---|---|---|
+| Padrão, sem calibração | 3 s por teste, +5 s quebrado, 5 s por invocação | 15min04s | 3h09min |
+| Calibrada no primeiro piloto (injeção antiga) | 1,5 s, +5 s, 5,2 s | 12min09s | 2h18min |
+| **Calibrada neste piloto** | **2,6 s**, **+4,6 s**, **5,6 s** | 13min41s (real: 14min47s) | **2h52min** |
+
+**Anomalias.** Nenhuma falha. Um custo novo: a duração mediana de um teste com locator intacto subiu de 1,5 s para 2,6 s (M4-T5, nas duas condições). O aumento corresponde à interceptação dos documentos (`route.fetch` e reescrita na página auxiliar), que é igual nas duas condições e não entra na medida de overhead. O modelo subestimou este piloto em 7%, a mesma margem do primeiro.
