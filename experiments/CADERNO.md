@@ -81,3 +81,48 @@ A segunda linha reflete a mudança registrada no adendo do ADR-027.
 | `goto` normal seguido de clique numa página que responde 404 | nenhum, porque o status só conta no `goto` |
 
 **Anomalias.** Nenhuma.
+
+---
+
+## 2026-10-12 — Piloto do harness
+
+**Objetivo.** Calibrar o tempo da rodada principal e exercitar o harness de ponta a ponta contra o site. **Os dados do piloto não entram nos resultados** (adendo do ADR-027), e as quatro entradas rodam de novo na rodada principal.
+
+**Entradas.**
+- M1-T8, do denominador de recuperação: 32 testes × 3 repetições.
+- M2-T1-travel_2-relabel, M2 num alvo de um token só ("Travel"): 1 × 3.
+- M5-T1-crime_51, M5 de T1 numa categoria: 1 × 3.
+- M4-T5, inerte: 16 × 1.
+
+São 8 invocações e 236 execuções, 118 por condição.
+
+**Ambiente.** Node v24.14.0, Playwright 1.63.0, Windows 11 Home 10.0.26200. `experiments/harness.config.ts`: 2 workers, `actionTimeout` de 5 s, timeout de teste de 30 s (padrão), `retries: 0`, `HEALING_CAPTURE=off`.
+
+**Commit.** `7b8c55d`. O `plan.json` marca `dirty: true` só por causa da exclusão de `experiments/.gitkeep` e `mutation/.gitkeep`, que não fazem parte do commit. O código executado é o do commit.
+
+**Comando.** `node experiments/harness.mts --run --entries M1-T8,M2-T1-travel_2-relabel,M5-T1-crime_51,M4-T5`, com a saída completa em `experiments/runs/piloto.log`. Rodada `experiments/runs/2026-10-12T09-31-12-224Z/`, não versionada.
+
+**Duração real.** 13min00s (06:31:11 a 06:44:11, horário local).
+
+**Estimativas de tempo.**
+
+| | Antes do piloto (custos padrão) | Depois de `--calibrate-from` |
+|---|---|---|
+| Custos | 3 s por teste, +5 s com locator quebrado, 5 s por invocação | **1,5 s** por teste, **+5 s** com locator quebrado, **5,2 s** por invocação |
+| Piloto | 15min04s | 12min09s (real: 13min00s) |
+| Rodada principal (4.040 execuções, 206 invocações) | 3h09min | **2h18min** |
+
+**Resultado resumido** (só verificação do harness, não é resultado experimental):
+- Pré-verificação, sinais de infraestrutura e tentativas: todas as 8 invocações passaram na primeira tentativa, com 0 execuções inválidas e 236/236 eventos gravados.
+- `applied` registrado em todas as execuções. O log de recuperação tem 102 entradas, todas com `run`, `timings` e `candidateIsOracle` preenchidos.
+- Medianas: `detectionWaitMs` de 5,0 s, que é o `actionTimeout`; `recoveryMs` de 18 ms (12 a 60 ms); `actionMs` de 2 ms.
+
+**Anomalias.**
+
+1. **Bug na injeção da mutação, uma corrida com o teste.** No M1-T8 da condição desligada, 3 das 96 execuções **passaram**: Music rep. 1, Sequential Art rep. 1 e Contemporary rep. 2, todas em testes de `product-details`. Nessas três, não há anotação de mutação para a página do produto, só para a da categoria. Nas 93 que falharam, a anotação do produto está lá, com `applied: true`.
+
+   A mutação roda em `DOMContentLoaded`. Depois do clique que abre o produto, o Playwright pode ler o DOM **enquanto ele ainda está sendo montado** (`parsing`), antes desse evento. Nesse intervalo o elemento existe sem mutação, e o teste passa sobre ele.
+
+   É um defeito da ferramenta de injeção, não do site nem do mecanismo. Ele afeta toda página aberta por clique, nas duas condições: na condição ligada, apareceria como "não acionado". **Correção pendente**, a ser aprovada antes da rodada principal. Pela regra, as três ocorrências não serão relatadas como não determinismo do site.
+
+2. **Bug no modelo de calibração, já corrigido.** A primeira versão de `--calibrate-from` separava as durações por desfecho (passou/falhou). Assim, as 96 recuperações do M1-T8, que passaram mas pagaram os 5 s da detecção, inflavam o custo de um teste comum para 6,4 s, e a estimativa ia a 3h58min. Agora a separação é pelo estado do locator na matriz (intacto/quebrado). A correção afeta só a estimativa, não a medição.

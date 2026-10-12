@@ -169,15 +169,21 @@ function testEvents(dir: string): Array<Record<string, unknown>> {
 }
 
 /**
- * Durações medidas numa rodada anterior: medianas de passou/falhou e da
- * inicialização por invocação. Execuções inválidas por infraestrutura ficam fora.
+ * Durações medidas numa rodada anterior: medianas por estado do locator na
+ * matriz (intacto ou quebrado) e da inicialização por invocação. O estado da
+ * matriz, e não o desfecho, separa os custos: um teste que passou por
+ * recuperação também pagou a espera da detecção. Execuções inválidas por
+ * infraestrutura ficam fora.
  */
 function calibrate(runDir: string, fallback: Costs): Costs {
-  const passed: number[] = [];
-  const failed: number[] = [];
+  const locatorOf = new Map(
+    readJson<{ linhas: MatrixRow[] }>('mutation/effectiveness-matrix.json').linhas.map((row) => [row.id, row.locator]),
+  );
+  const intact: number[] = [];
+  const broken: number[] = [];
   for (const event of testEvents(runDir)) {
     if (event.invalid !== true) {
-      (event.status === 'passed' ? passed : failed).push(Number(event.durationMs) / 1000);
+      (locatorOf.get(String(event.entryId)) === 'quebra' ? broken : intact).push(Number(event.durationMs) / 1000);
     }
   }
   const startups: number[] = [];
@@ -189,14 +195,16 @@ function calibrate(runDir: string, fallback: Costs): Costs {
       }
     }
   }
-  const perTest = median(passed) ?? fallback.perTestS;
-  const failedMedian = median(failed);
+  const perTest = median(intact) ?? fallback.perTestS;
+  const brokenMedian = median(broken);
   const round = (value: number) => Math.round(value * 10) / 10;
   return {
     perTestS: round(perTest),
-    brokenExtraS: round(failedMedian === null ? fallback.brokenExtraS : Math.max(0, failedMedian - perTest)),
+    brokenExtraS: round(brokenMedian === null ? fallback.brokenExtraS : Math.max(0, brokenMedian - perTest)),
     startupS: round(median(startups) ?? fallback.startupS),
-    source: `calibrado em ${path.relative(ROOT, runDir)} (${passed.length} passaram, ${failed.length} falharam, ${startups.length} invocações)`,
+    source:
+      `calibrado em ${path.relative(ROOT, runDir)} ` +
+      `(${intact.length} execuções com locator intacto, ${broken.length} com locator quebrado, ${startups.length} invocações)`,
   };
 }
 
