@@ -1,0 +1,19 @@
+{
+  "selector": "role=article[0] >> role=heading[level=3] >> role=link",
+  "url": "/catalogue/category/books/crime_51/index.html",
+  "tag": "a",
+  "text": "The Long Shadow of ...",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": null,
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "h3",
+    "parentSiblingIndex": 2,
+    "siblingIndex": 0,
+    "depth": 10
+  }
+}

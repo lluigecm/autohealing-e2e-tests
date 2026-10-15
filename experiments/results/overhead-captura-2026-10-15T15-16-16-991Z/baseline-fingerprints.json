@@ -1,0 +1,538 @@
+[
+  {
+    "name": "catalogue-all-the-light-we-cannot-see_660-index.html/.product_main-p.instock.availability.json",
+    "bytes": 407
+  },
+  {
+    "name": "catalogue-all-the-light-we-cannot-see_660-index.html/.product_main-p.price_color.json",
+    "bytes": 373
+  },
+  {
+    "name": "catalogue-all-the-light-we-cannot-see_660-index.html/.product_main-p.star-rating.json",
+    "bytes": 371
+  },
+  {
+    "name": "catalogue-all-the-light-we-cannot-see_660-index.html/role-heading-level-1.json",
+    "bytes": 379
+  },
+  {
+    "name": "catalogue-category-books-art_25-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 387
+  },
+  {
+    "name": "catalogue-category-books-art_25-index.html/role-article.json",
+    "bytes": 391
+  },
+  {
+    "name": "catalogue-category-books-art_25-index.html/role-heading-level-1.json",
+    "bytes": 345
+  },
+  {
+    "name": "catalogue-category-books-autobiography_27-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 396
+  },
+  {
+    "name": "catalogue-category-books-autobiography_27-index.html/role-article.json",
+    "bytes": 400
+  },
+  {
+    "name": "catalogue-category-books-autobiography_27-index.html/role-heading-level-1.json",
+    "bytes": 365
+  },
+  {
+    "name": "catalogue-category-books-biography_36-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 413
+  },
+  {
+    "name": "catalogue-category-books-biography_36-index.html/role-article.json",
+    "bytes": 417
+  },
+  {
+    "name": "catalogue-category-books-biography_36-index.html/role-heading-level-1.json",
+    "bytes": 357
+  },
+  {
+    "name": "catalogue-category-books-christian-fiction_34-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 401
+  },
+  {
+    "name": "catalogue-category-books-christian-fiction_34-index.html/role-article.json",
+    "bytes": 405
+  },
+  {
+    "name": "catalogue-category-books-christian-fiction_34-index.html/role-heading-level-1.json",
+    "bytes": 373
+  },
+  {
+    "name": "catalogue-category-books-contemporary_38-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 398
+  },
+  {
+    "name": "catalogue-category-books-contemporary_38-index.html/role-article.json",
+    "bytes": 402
+  },
+  {
+    "name": "catalogue-category-books-contemporary_38-index.html/role-heading-level-1.json",
+    "bytes": 363
+  },
+  {
+    "name": "catalogue-category-books-crime_51-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 397
+  },
+  {
+    "name": "catalogue-category-books-crime_51-index.html/role-article.json",
+    "bytes": 401
+  },
+  {
+    "name": "catalogue-category-books-crime_51-index.html/role-heading-level-1.json",
+    "bytes": 349
+  },
+  {
+    "name": "catalogue-category-books-default_15-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 400
+  },
+  {
+    "name": "catalogue-category-books-default_15-index.html/role-article.json",
+    "bytes": 404
+  },
+  {
+    "name": "catalogue-category-books-default_15-index.html/role-heading-level-1.json",
+    "bytes": 353
+  },
+  {
+    "name": "catalogue-category-books-health_47-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 406
+  },
+  {
+    "name": "catalogue-category-books-health_47-index.html/role-article.json",
+    "bytes": 410
+  },
+  {
+    "name": "catalogue-category-books-health_47-index.html/role-heading-level-1.json",
+    "bytes": 351
+  },
+  {
+    "name": "catalogue-category-books-historical_42-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 400
+  },
+  {
+    "name": "catalogue-category-books-historical_42-index.html/role-article.json",
+    "bytes": 404
+  },
+  {
+    "name": "catalogue-category-books-historical_42-index.html/role-heading-level-1.json",
+    "bytes": 359
+  },
+  {
+    "name": "catalogue-category-books-history_32-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 405
+  },
+  {
+    "name": "catalogue-category-books-history_32-index.html/role-article.json",
+    "bytes": 409
+  },
+  {
+    "name": "catalogue-category-books-history_32-index.html/role-heading-level-1.json",
+    "bytes": 353
+  },
+  {
+    "name": "catalogue-category-books-humor_30-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 399
+  },
+  {
+    "name": "catalogue-category-books-humor_30-index.html/role-article.json",
+    "bytes": 403
+  },
+  {
+    "name": "catalogue-category-books-humor_30-index.html/role-heading-level-1.json",
+    "bytes": 349
+  },
+  {
+    "name": "catalogue-category-books-music_14-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 392
+  },
+  {
+    "name": "catalogue-category-books-music_14-index.html/role-article.json",
+    "bytes": 396
+  },
+  {
+    "name": "catalogue-category-books-music_14-index.html/role-heading-level-1.json",
+    "bytes": 349
+  },
+  {
+    "name": "catalogue-category-books-mystery_3-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 389
+  },
+  {
+    "name": "catalogue-category-books-mystery_3-index.html/role-article.json",
+    "bytes": 393
+  },
+  {
+    "name": "catalogue-category-books-mystery_3-index.html/role-heading-level-1.json",
+    "bytes": 352
+  },
+  {
+    "name": "catalogue-category-books-psychology_26-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 417
+  },
+  {
+    "name": "catalogue-category-books-psychology_26-index.html/role-article.json",
+    "bytes": 421
+  },
+  {
+    "name": "catalogue-category-books-psychology_26-index.html/role-heading-level-1.json",
+    "bytes": 359
+  },
+  {
+    "name": "catalogue-category-books-sequential-art_5-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 418
+  },
+  {
+    "name": "catalogue-category-books-sequential-art_5-index.html/role-article.json",
+    "bytes": 422
+  },
+  {
+    "name": "catalogue-category-books-sequential-art_5-index.html/role-heading-level-1.json",
+    "bytes": 366
+  },
+  {
+    "name": "catalogue-category-books-travel_2-index.html/role-article-0-role-heading-level-3-role-link.json",
+    "bytes": 398
+  },
+  {
+    "name": "catalogue-category-books-travel_2-index.html/role-article.json",
+    "bytes": 402
+  },
+  {
+    "name": "catalogue-category-books-travel_2-index.html/role-heading-level-1.json",
+    "bytes": 350
+  },
+  {
+    "name": "catalogue-its-only-the-himalayas_981-index.html/.product_main-p.instock.availability.json",
+    "bytes": 402
+  },
+  {
+    "name": "catalogue-its-only-the-himalayas_981-index.html/.product_main-p.price_color.json",
+    "bytes": 368
+  },
+  {
+    "name": "catalogue-its-only-the-himalayas_981-index.html/.product_main-p.star-rating.json",
+    "bytes": 365
+  },
+  {
+    "name": "catalogue-its-only-the-himalayas_981-index.html/role-heading-level-1.json",
+    "bytes": 370
+  },
+  {
+    "name": "catalogue-louisa-the-extraordinary-life-of-mrs-adams_818-index.html/.product_main-p.instock.availability.json",
+    "bytes": 422
+  },
+  {
+    "name": "catalogue-louisa-the-extraordinary-life-of-mrs-adams_818-index.html/.product_main-p.price_color.json",
+    "bytes": 388
+  },
+  {
+    "name": "catalogue-louisa-the-extraordinary-life-of-mrs-adams_818-index.html/.product_main-p.star-rating.json",
+    "bytes": 385
+  },
+  {
+    "name": "catalogue-louisa-the-extraordinary-life-of-mrs-adams_818-index.html/role-heading-level-1.json",
+    "bytes": 411
+  },
+  {
+    "name": "catalogue-page-2.html/role-article-role-heading-level-3.json",
+    "bytes": 352
+  },
+  {
+    "name": "catalogue-redeeming-love_826-index.html/.product_main-p.instock.availability.json",
+    "bytes": 394
+  },
+  {
+    "name": "catalogue-redeeming-love_826-index.html/.product_main-p.price_color.json",
+    "bytes": 360
+  },
+  {
+    "name": "catalogue-redeeming-love_826-index.html/.product_main-p.star-rating.json",
+    "bytes": 358
+  },
+  {
+    "name": "catalogue-redeeming-love_826-index.html/role-heading-level-1.json",
+    "bytes": 353
+  },
+  {
+    "name": "catalogue-rip-it-up-and-start-again_986-index.html/.product_main-p.instock.availability.json",
+    "bytes": 405
+  },
+  {
+    "name": "catalogue-rip-it-up-and-start-again_986-index.html/.product_main-p.price_color.json",
+    "bytes": 371
+  },
+  {
+    "name": "catalogue-rip-it-up-and-start-again_986-index.html/.product_main-p.star-rating.json",
+    "bytes": 369
+  },
+  {
+    "name": "catalogue-rip-it-up-and-start-again_986-index.html/role-heading-level-1.json",
+    "bytes": 375
+  },
+  {
+    "name": "catalogue-sapiens-a-brief-history-of-humankind_996-index.html/.product_main-p.instock.availability.json",
+    "bytes": 416
+  },
+  {
+    "name": "catalogue-sapiens-a-brief-history-of-humankind_996-index.html/.product_main-p.price_color.json",
+    "bytes": 382
+  },
+  {
+    "name": "catalogue-sapiens-a-brief-history-of-humankind_996-index.html/.product_main-p.star-rating.json",
+    "bytes": 380
+  },
+  {
+    "name": "catalogue-sapiens-a-brief-history-of-humankind_996-index.html/role-heading-level-1.json",
+    "bytes": 398
+  },
+  {
+    "name": "catalogue-scott-pilgrims-precious-little-life-scott-pilgrim-1_987-index.html/.product_main-p.instock.availability.json",
+    "bytes": 431
+  },
+  {
+    "name": "catalogue-scott-pilgrims-precious-little-life-scott-pilgrim-1_987-index.html/.product_main-p.price_color.json",
+    "bytes": 397
+  },
+  {
+    "name": "catalogue-scott-pilgrims-precious-little-life-scott-pilgrim-1_987-index.html/.product_main-p.star-rating.json",
+    "bytes": 395
+  },
+  {
+    "name": "catalogue-scott-pilgrims-precious-little-life-scott-pilgrim-1_987-index.html/role-heading-level-1.json",
+    "bytes": 431
+  },
+  {
+    "name": "catalogue-sharp-objects_997-index.html/.product_main-p.instock.availability.json",
+    "bytes": 393
+  },
+  {
+    "name": "catalogue-sharp-objects_997-index.html/.product_main-p.price_color.json",
+    "bytes": 359
+  },
+  {
+    "name": "catalogue-sharp-objects_997-index.html/.product_main-p.star-rating.json",
+    "bytes": 357
+  },
+  {
+    "name": "catalogue-sharp-objects_997-index.html/role-heading-level-1.json",
+    "bytes": 351
+  },
+  {
+    "name": "catalogue-the-argonauts_837-index.html/.product_main-p.instock.availability.json",
+    "bytes": 393
+  },
+  {
+    "name": "catalogue-the-argonauts_837-index.html/.product_main-p.price_color.json",
+    "bytes": 359
+  },
+  {
+    "name": "catalogue-the-argonauts_837-index.html/.product_main-p.star-rating.json",
+    "bytes": 356
+  },
+  {
+    "name": "catalogue-the-argonauts_837-index.html/role-heading-level-1.json",
+    "bytes": 351
+  },
+  {
+    "name": "catalogue-the-bulletproof-diet-lose-up-to-a-pound-a-day-reclaim-energy-and-focus-upgrade-your-life_931-index.html/.product_main-p.instock.availability.json",
+    "bytes": 468
+  },
+  {
+    "name": "catalogue-the-bulletproof-diet-lose-up-to-a-pound-a-day-reclaim-energy-and-focus-upgrade-your-life_931-index.html/.product_main-p.price_color.json",
+    "bytes": 434
+  },
+  {
+    "name": "catalogue-the-bulletproof-diet-lose-up-to-a-pound-a-day-reclaim-energy-and-focus-upgrade-your-life_931-index.html/.product_main-p.star-rating.json",
+    "bytes": 433
+  },
+  {
+    "name": "catalogue-the-bulletproof-diet-lose-up-to-a-pound-a-day-reclaim-energy-and-focus-upgrade-your-life_931-index.html/role-heading-level-1.json",
+    "bytes": 504
+  },
+  {
+    "name": "catalogue-the-coming-woman-a-novel-based-on-the-life-of-the-infamous-feminist-victoria-woodhull_993-index.html/.product_main-p.instock.availability.json",
+    "bytes": 465
+  },
+  {
+    "name": "catalogue-the-coming-woman-a-novel-based-on-the-life-of-the-infamous-feminist-victoria-woodhull_993-index.html/.product_main-p.price_color.json",
+    "bytes": 431
+  },
+  {
+    "name": "catalogue-the-coming-woman-a-novel-based-on-the-life-of-the-infamous-feminist-victoria-woodhull_993-index.html/.product_main-p.star-rating.json",
+    "bytes": 430
+  },
+  {
+    "name": "catalogue-the-coming-woman-a-novel-based-on-the-life-of-the-infamous-feminist-victoria-woodhull_993-index.html/role-heading-level-1.json",
+    "bytes": 497
+  },
+  {
+    "name": "catalogue-the-long-haul-diary-of-a-wimpy-kid-9_757-index.html/.product_main-p.instock.availability.json",
+    "bytes": 416
+  },
+  {
+    "name": "catalogue-the-long-haul-diary-of-a-wimpy-kid-9_757-index.html/.product_main-p.price_color.json",
+    "bytes": 382
+  },
+  {
+    "name": "catalogue-the-long-haul-diary-of-a-wimpy-kid-9_757-index.html/.product_main-p.star-rating.json",
+    "bytes": 379
+  },
+  {
+    "name": "catalogue-the-long-haul-diary-of-a-wimpy-kid-9_757-index.html/role-heading-level-1.json",
+    "bytes": 400
+  },
+  {
+    "name": "catalogue-the-long-shadow-of-small-ghosts-murder-and-memory-in-an-american-city_848-index.html/.product_main-p.instock.availability.json",
+    "bytes": 449
+  },
+  {
+    "name": "catalogue-the-long-shadow-of-small-ghosts-murder-and-memory-in-an-american-city_848-index.html/.product_main-p.price_color.json",
+    "bytes": 415
+  },
+  {
+    "name": "catalogue-the-long-shadow-of-small-ghosts-murder-and-memory-in-an-american-city_848-index.html/.product_main-p.star-rating.json",
+    "bytes": 412
+  },
+  {
+    "name": "catalogue-the-long-shadow-of-small-ghosts-murder-and-memory-in-an-american-city_848-index.html/role-heading-level-1.json",
+    "bytes": 464
+  },
+  {
+    "name": "catalogue-the-lucifer-effect-understanding-how-good-people-turn-evil_758-index.html/.product_main-p.instock.availability.json",
+    "bytes": 438
+  },
+  {
+    "name": "catalogue-the-lucifer-effect-understanding-how-good-people-turn-evil_758-index.html/.product_main-p.price_color.json",
+    "bytes": 404
+  },
+  {
+    "name": "catalogue-the-lucifer-effect-understanding-how-good-people-turn-evil_758-index.html/.product_main-p.star-rating.json",
+    "bytes": 401
+  },
+  {
+    "name": "catalogue-the-lucifer-effect-understanding-how-good-people-turn-evil_758-index.html/role-heading-level-1.json",
+    "bytes": 442
+  },
+  {
+    "name": "catalogue-wall-and-piece_971-index.html/.product_main-p.instock.availability.json",
+    "bytes": 394
+  },
+  {
+    "name": "catalogue-wall-and-piece_971-index.html/.product_main-p.price_color.json",
+    "bytes": 360
+  },
+  {
+    "name": "catalogue-wall-and-piece_971-index.html/.product_main-p.star-rating.json",
+    "bytes": 358
+  },
+  {
+    "name": "catalogue-wall-and-piece_971-index.html/role-heading-level-1.json",
+    "bytes": 353
+  },
+  {
+    "name": "catalogue-when-we-collided_955-index.html/.product_main-p.instock.availability.json",
+    "bytes": 396
+  },
+  {
+    "name": "catalogue-when-we-collided_955-index.html/.product_main-p.price_color.json",
+    "bytes": 362
+  },
+  {
+    "name": "catalogue-when-we-collided_955-index.html/.product_main-p.star-rating.json",
+    "bytes": 359
+  },
+  {
+    "name": "catalogue-when-we-collided_955-index.html/role-heading-level-1.json",
+    "bytes": 357
+  },
+  {
+    "name": "index.html/role-article-0.json",
+    "bytes": 366
+  },
+  {
+    "name": "index.html/role-article-role-heading-level-3.json",
+    "bytes": 348
+  },
+  {
+    "name": "index.html/role-article.json",
+    "bytes": 363
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-art.json",
+    "bytes": 332
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-autobiography.json",
+    "bytes": 352
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-biography.json",
+    "bytes": 344
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-christian-fiction.json",
+    "bytes": 360
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-contemporary.json",
+    "bytes": 350
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-crime.json",
+    "bytes": 336
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-default.json",
+    "bytes": 340
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-health.json",
+    "bytes": 338
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-historical.json",
+    "bytes": 346
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-history.json",
+    "bytes": 340
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-humor.json",
+    "bytes": 336
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-music.json",
+    "bytes": 336
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-mystery.json",
+    "bytes": 339
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-psychology.json",
+    "bytes": 346
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-sequential-art.json",
+    "bytes": 353
+  },
+  {
+    "name": "index.html/role-complementary-role-link-name-travel.json",
+    "bytes": 337
+  },
+  {
+    "name": "index.html/role-complementary.json",
+    "bytes": 855
+  },
+  {
+    "name": "index.html/role-link-name-next.json",
+    "bytes": 311
+  }
+]

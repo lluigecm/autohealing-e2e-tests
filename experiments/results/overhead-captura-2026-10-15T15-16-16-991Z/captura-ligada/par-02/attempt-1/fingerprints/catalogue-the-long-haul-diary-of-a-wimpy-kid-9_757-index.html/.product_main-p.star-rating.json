@@ -1,0 +1,19 @@
+{
+  "selector": ".product_main p.star-rating",
+  "url": "/catalogue/the-long-haul-diary-of-a-wimpy-kid-9_757/index.html",
+  "tag": "p",
+  "text": "",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "star-rating One",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 3,
+    "depth": 7
+  }
+}

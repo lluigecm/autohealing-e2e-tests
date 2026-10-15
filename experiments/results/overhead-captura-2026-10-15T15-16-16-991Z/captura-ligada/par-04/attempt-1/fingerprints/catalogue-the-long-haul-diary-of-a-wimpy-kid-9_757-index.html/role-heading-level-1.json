@@ -1,0 +1,19 @@
+{
+  "selector": "role=heading[level=1]",
+  "url": "/catalogue/the-long-haul-diary-of-a-wimpy-kid-9_757/index.html",
+  "tag": "h1",
+  "text": "The Long Haul (Diary of a Wimpy Kid #9)",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": null,
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 0,
+    "depth": 7
+  }
+}
