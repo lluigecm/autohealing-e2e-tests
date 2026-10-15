@@ -317,3 +317,37 @@ Nada destoou, e a rodada seguiu.
 - `.gitattributes` com `experiments/results/** -text`, commitado em `0a3c31c` **antes** dos resultados. Sem ele, o `core.autocrlf=true` do repositório converteria o fim de linha da cópia de trabalho em checkouts futuros, e a cópia deixaria de ser idêntica à rodada.
 - **Manifesto:** `experiments/results/2026-10-12T16-32-03-131Z/MANIFEST.sha256`, no formato do `sha256sum`, com 2.506 linhas. Os hashes foram calculados **a partir dos originais**: os 2.505 arquivos da rodada em `experiments/runs/2026-10-12T16-32-03-131Z/` e o log do console em `experiments/runs/principal.log`, que na cópia se chama `console.log`.
 - **Conferência:** `sha256sum -c MANIFEST.sha256` dentro do diretório dos resultados confere os 2.506 arquivos, e `cmp` confirma o log idêntico. Para verificar no futuro, basta rodar o mesmo comando ali.
+
+---
+
+## 2026-10-14 — Levantamento a posteriori do ambiente da rodada principal
+
+**Objetivo.** Completar o registro do ambiente da rodada principal. A entrada da rodada não traz CPU, RAM, versão do Chromium nem estado da máquina, porque o modelo de entrada deste caderno não os pedia. **Nada aqui foi registrado durante a rodada.** Tudo foi coletado em 2026-10-14, sem acesso ao site.
+
+**Máquina.** A rodada foi gerada nesta máquina: o diretório `experiments/runs/2026-10-12T16-32-03-131Z/`, ignorado pelo git, está nela.
+- Desktop, sem bateria. Placa-mãe Gigabyte B550M K.
+- AMD Ryzen 7 5700G: 8 núcleos, 16 threads, 3,8 GHz base.
+- 16 GB de RAM: 2 × 8 GB DDR4-3200.
+- Windows 11 Home 25H2, build 26200.9457.
+
+**Por que esses dados valem para a rodada.** O último boot foi em 2026-10-12 às 05:52:30, antes do início da rodada (13:32:02), e a máquina não reiniciou desde então. Trocar hardware exige desligar, e uma atualização cumulativa do Windows só se aplica no reinício. Isso é inferência a partir do horário do boot.
+
+**Chromium: 153.0.8010.12 (revisão 1243), headless.**
+- O `package-lock.json` fixa o `playwright-core` 1.63.0, e o `browsers.json` dele aponta para a revisão 1243.
+- O Playwright do `node_modules` foi instalado em 2026-09-05 e não mudou desde então, assim como o `chromium-1243`.
+- Abrindo o navegador pelo `playwright-core` do projeto, a versão foi 153.0.8010.12.
+- O `experiments/harness.config.ts` não define `headless` nem `channel`.
+
+**Energia.** Rede elétrica, sem bateria. O plano de energia atual é "Equilibrado". O plano vigente durante a rodada não é verificável.
+
+**Log System do Windows, de 13:30 a 16:40 de 2026-10-12.** Nenhum evento de suspensão, retomada, reinício ou Windows Update. Só dois avisos do Tcpip:
+- 14:54:37, evento 4266: as portas efêmeras UDP se esgotaram. Sem carimbo de horário por invocação, ela fica entre a 55ª e a 157ª.
+- 15:29:00, evento 4231: as portas efêmeras TCP se esgotaram. Nesse momento rodava a invocação 191 (M5-T3, healing ligado, das 15:20:05 às 15:29:30 pelo `decidedAt`), que teve 0 execuções inválidas.
+
+**Os avisos não explicam o `net::ERR_FAILED` da invocação 47.** Pelo `decidedAt`, a tentativa 1 do M1-T9 com healing ligado rodou das 13:54:25 às 13:59:40, uma hora antes do primeiro aviso. A causa segue indeterminada.
+
+**Programas em execução.** Segundo declaração do usuário em 2026-10-14, nada rodava no computador além da rodada e do editor que a disparou (VS Code com o Claude Code). Isso não foi registrado durante a rodada, e o sistema não guarda prova disso. A declaração não cobre os serviços em segundo plano do Windows.
+
+**Lacuna encontrada.** O `invocations.jsonl` não grava o horário de cada invocação. Só as invocações com healing ligado em que o mecanismo foi acionado têm horário, pelo `decidedAt`. Gravar o horário fica como melhoria para rodadas futuras, junto com o erro original no `catch` da reescrita e o ambiente completo no `plan.json`.
+
+**Anomalias.** Os dois avisos de esgotamento de portas acima.
