@@ -34,6 +34,8 @@ São **três números com propósitos distintos e não devem ser somados num tot
 
 Os unitários gravam num diretório temporário via `HEALING_FINGERPRINTS_DIR` — o baseline versionado em `fingerprints/` só recebe arquivos de execuções reais da suíte.
 
+`configureCaptureTimings(coletor)` liga a medição da duração de cada extração e de cada gravação feitas por `withCapture`, usada na medição do custo da captura (`experiments/overhead.mts`). Sem coletor, que é o padrão, nada é medido. A medição só lê o relógio e não muda o que é gravado.
+
 ## Schema
 
 ```jsonc

@@ -351,3 +351,45 @@ Nada destoou, e a rodada seguiu.
 **Lacuna encontrada.** O `invocations.jsonl` não grava o horário de cada invocação. Só as invocações com healing ligado em que o mecanismo foi acionado têm horário, pelo `decidedAt`. Gravar o horário fica como melhoria para rodadas futuras, junto com o erro original no `catch` da reescrita e o ambiente completo no `plan.json`.
 
 **Anomalias.** Os dois avisos de esgotamento de portas acima.
+
+---
+
+## 2026-10-15 — Medição do custo da captura: código verificado offline
+
+**Objetivo.** Antes de qualquer execução contra o site, verificar sem rede o código da medição complementar do custo da captura (ADR-031, commit `fe7d254`).
+
+**Ambiente.** Node v24.14.0, Playwright 1.63.0, Windows 11 Home 10.0.26200, `playwright.unit.config.ts`. Sem rede.
+
+**Commit.** Working tree sobre `fe7d254`, com o código ainda não commitado. Ele entra no commit seguinte a esta entrada.
+
+**Mudanças de código.**
+- **Instrumentação.** `withCapture` ganhou um coletor opcional da duração de cada extração e de cada gravação. Sem coletor, nada é medido.
+- **Peças comuns, sem mudança de comportamento do harness:**
+  - os sinais de infraestrutura saíram de `experiments/harnessSetup.ts` para `experiments/infraSignals.ts`;
+  - a pré-verificação e o estado do git saíram de `experiments/harness.mts` para `experiments/runSupport.mts`;
+  - o laço de `experiments/runState.mts` ficou genérico no tipo da invocação e aceita um registro extra por tentativa.
+- **Novos:** o orquestrador `experiments/overhead.mts`, a config, o reporter e a instalação da medição, e a análise `experiments/overheadAnalysis.mts`. A análise foi escrita e testada antes de existir qualquer dado.
+
+**Comandos e resultados.**
+
+| Comando | Resultado |
+|---|---|
+| `npx tsc -p .` | Sem erros |
+| `npx playwright test --config=playwright.unit.config.ts` | 143/143. Eram 117; entraram 26 |
+| `node experiments/harness.mts` (simulação) | Igual à de antes: 103 entradas, 206 invocações, 4.040 execuções, ordem 52/51 |
+| `node experiments/overhead.mts` (simulação) | 21 invocações (aquecimento + 10 pares), 1.386 execuções, 5 pares abrindo por cada condição, cerca de 19 min estimados |
+| `npx playwright test --config experiments/overhead.config.ts --list` | Sem as variáveis do orquestrador, recusa rodar. Com elas, lista os 66 testes nas duas condições. Nenhum teste executado |
+
+Os 26 unitários novos cobrem:
+- os mesmos bytes gravados e o mesmo resultado da ação, com e sem coletor;
+- nada medido com a captura desligada;
+- `healing/fingerprints/` como diretório padrão;
+- o plano e a alternância dos pares;
+- a verificação da captura, inclusive o arquivo pré-carregado que não foi regravado;
+- a leitura dos 134 fingerprints a partir do git;
+- as proteções do ambiente;
+- o quantil tipo 7, a regra de relato e as quatro métricas sobre uma rodada fictícia.
+
+**Não verificado offline.** O caminho completo coletor → anotação → reporter só roda com os testes navegando no site. Ele será conferido nas primeiras invocações da rodada.
+
+**Anomalias.** Nenhuma.
