@@ -1,0 +1,19 @@
+{
+  "selector": "role=heading[level=1]",
+  "url": "/catalogue/the-coming-woman-a-novel-based-on-the-life-of-the-infamous-feminist-victoria-woodhull_993/index.html",
+  "tag": "h1",
+  "text": "The Coming Woman: A Novel Based on the Life of the Infamous Feminist, Victoria Woodhull",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": null,
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 0,
+    "depth": 7
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "selector": "role=complementary >> role=link[name=Mystery]",
+  "url": "/index.html",
+  "tag": "a",
+  "text": "Mystery",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": null,
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "li",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 0,
+    "depth": 9
+  }
+}

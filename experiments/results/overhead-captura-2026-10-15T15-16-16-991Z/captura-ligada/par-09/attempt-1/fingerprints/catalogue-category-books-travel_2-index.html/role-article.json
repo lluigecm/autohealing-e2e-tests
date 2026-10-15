@@ -1,0 +1,19 @@
+{
+  "selector": "role=article",
+  "url": "/catalogue/category/books/travel_2/index.html",
+  "tag": "article",
+  "text": "It's Only the Himalayas £45.17 In stock Add to basket",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "product_pod",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "li",
+    "parentSiblingIndex": 0,
+    "siblingIndex": 0,
+    "depth": 8
+  }
+}

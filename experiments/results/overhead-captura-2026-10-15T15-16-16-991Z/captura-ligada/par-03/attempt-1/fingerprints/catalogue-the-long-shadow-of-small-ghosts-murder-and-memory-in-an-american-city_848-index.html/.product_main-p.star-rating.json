@@ -1,0 +1,19 @@
+{
+  "selector": ".product_main p.star-rating",
+  "url": "/catalogue/the-long-shadow-of-small-ghosts-murder-and-memory-in-an-american-city_848/index.html",
+  "tag": "p",
+  "text": "",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": "star-rating One",
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 3,
+    "depth": 7
+  }
+}

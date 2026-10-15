@@ -1,0 +1,19 @@
+{
+  "selector": "role=article[0] >> role=heading[level=3] >> role=link",
+  "url": "/catalogue/category/books/art_25/index.html",
+  "tag": "a",
+  "text": "Wall and Piece",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": null,
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "h3",
+    "parentSiblingIndex": 2,
+    "siblingIndex": 0,
+    "depth": 10
+  }
+}

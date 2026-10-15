@@ -683,3 +683,105 @@ Cada sinal vira anotação do teste com o tipo, a URL e o status ou o código de
 - (d) Retomar com outro commit: descartado, porque misturaria código diferente na mesma rodada.
 
 **Consequência.** Uma rodada retomada tem um intervalo de tempo no meio. Ele fica registrado e é relatado. A rodada iniciada às 09:23, com a ordem antiga e o desfecho errado, não é oficial e não é retomada.
+
+---
+
+## ADR-031 — Medição complementar do overhead da captura de fingerprint
+
+**Data:** 2026-10-15 · **Etapa:** experimentos, medição complementar à rodada principal · **Status:** aceito; fixado antes do código da medição e antes de qualquer execução
+
+**Contexto.** A rodada principal de 2026-10-12 não mede o custo da Camada 1. Nela, `HEALING_CAPTURE=off` valeu nas duas condições (ADR-017 e adendo do ADR-027), e a extração do fingerprint foi pulada. O overhead definido no ADR-027 (custo passivo e `recoveryMs`) é o do mecanismo de recuperação, não o da captura. Falta medir o custo que a captura impõe a uma suíte saudável: é o custo que o protótipo cobra em toda execução, com ou sem quebra. A medição é **complementar**: não faz parte do experimento principal, não altera nenhum dado nem regra dele e entra no texto separada dele.
+
+**Decisão.**
+
+*Configuração.*
+- **Suíte e config.** Suíte baseline de 66 testes, sem mutação, sem a interceptação de documentos do ADR-029 e com `HEALING` ausente. A config é própria e espelha `playwright.config.ts`, que é o `npm test` que produziu a baseline. Não há `actionTimeout`. Diferenças em relação ao `npm test`:
+  - 2 workers;
+  - `retries: 0`;
+  - um reporter que grava os eventos.
+
+  Nenhuma das três muda o desfecho de um teste saudável.
+- **Duas condições.**
+  - Captura ligada: `HEALING_CAPTURE` ausente, que é o padrão.
+  - Captura desligada: `HEALING_CAPTURE=off`.
+- **Diretório de captura.**
+  - `HEALING_FINGERPRINTS_DIR` aponta para um diretório por tentativa, dentro da pasta da rodada em `experiments/runs/`, no mesmo disco do repositório e nunca em `%TEMP%`.
+  - Na captura ligada, antes de cada tentativa, o diretório recebe os 134 fingerprints versionados, com os bytes do commit da rodada. Assim a captura sobrescreve arquivos existentes, como no uso real.
+  - Na captura desligada, o diretório começa vazio.
+- **Padrão preservado.** Sem `HEALING_FINGERPRINTS_DIR`, a gravação continua indo para `healing/fingerprints/`. Um unitário trava isso.
+- **Sequência.** 1 execução de aquecimento com a captura **ligada**, descartada, seguida de 10 pares. Os pares 1, 3, 5, 7 e 9 começam pela desligada, e os pares 2, 4, 6, 8 e 10 pela ligada. Uma execução é uma invocação do Playwright com os 66 testes.
+- **Máquina.** A mesma da rodada principal, com os mesmos 2 workers e `retries: 0`.
+
+*Execução inválida, invocação incompleta e interrupção.*
+- Valem as regras do ADR-028:
+  - pré-verificação da home antes de cada tentativa;
+  - invalidade só por sinal estruturado;
+  - reexecução da invocação inteira uma única vez;
+  - invocação não medida depois da segunda tentativa inválida.
+- Os sinais estruturados são observados do mesmo jeito, só que sem a mutação.
+- Valem também as regras do ADR-030:
+  - árvore limpa;
+  - invocação incompleta aborta a rodada sem gravar desfecho;
+  - retomada no mesmo commit, só das invocações sem desfecho.
+- Um par com qualquer lado não medido sai de todas as comparações e é relatado pelo número. Nenhum par extra entra no lugar dele.
+
+*Instrumentação.*
+- **O que se mede.** Com a captura ligada, `withCapture` mede, por chamada, a duração da extração e a da gravação. A gravação é a chamada de `persistFingerprint` inteira: criar o diretório, escrever o temporário e renomear.
+- **Coletor opcional.** Os tempos vão para um coletor opcional. Sem coletor configurado, nada é medido nem registrado, e o comportamento é o de hoje.
+- **O comportamento não muda.** A medição só lê o relógio. Não muda a ordem extrair → agir → persistir nem o que é gravado. Um unitário compara o resultado da ação e os bytes gravados com e sem coletor.
+- **Como os tempos são gravados.** Na medição, o coletor anexa os tempos ao teste como anotação, em memória. O reporter os grava em disco no processo principal, fora do tempo do teste.
+
+*Registro por tentativa.*
+- Horário de início e de fim.
+- Plano de energia vigente no início e no fim (`powercfg /getactivescheme`).
+- Lista de processos em execução no início e no fim.
+- Hash dos arquivos de `healing/fingerprints/` antes e depois.
+- No `plan.json`: commit, versões do Node, do Playwright e do Chromium (esta lida do próprio navegador), CPU, RAM e build do SO.
+- Os programas abertos também são anotados no caderno.
+
+*Verificação por tentativa.*
+- **Captura ligada:** ao fim, o diretório tem exatamente os 134 arquivos. Cada um é idêntico byte a byte ao versionado e foi **regravado durante a tentativa**, com data de modificação posterior ao início. Sem a segunda condição, um teste que falhasse antes de capturar deixaria o arquivo pré-carregado intacto, e a verificação passaria mesmo assim.
+- **Captura desligada:** o diretório continua vazio.
+- **Nas duas condições:** `healing/fingerprints/` tem o mesmo hash antes e depois.
+- **Verificação que falha:** a tentativa não é excluída. A falha é registrada como anomalia no caderno e relatada junto com o resultado.
+
+*Métricas.* Todas são calculadas sobre os pares completos. O aquecimento não entra em nenhuma.
+1. **Custo direto.**
+   - Duração de cada chamada de extração e de cada chamada de gravação, nas execuções com captura ligada: mediana e intervalo interquartil, separadas.
+   - Total por execução de teste, somando extração e gravação: mediana e intervalo interquartil.
+2. **Duração por teste**, pela `duration` do Playwright.
+   - Para cada um dos 66 testes, a mediana das execuções em cada condição.
+   - A diferença pareada por teste, ligada menos desligada, dá 66 valores, relatados como mediana e intervalo interquartil.
+   - A razão é a mediana das diferenças dividida pela mediana das 66 medianas sem captura.
+3. **Tempo total de cada execução da suíte**, do disparo do Playwright ao término, medido pelo orquestrador.
+   - A diferença em cada par, ligada menos desligada, dá 10 valores, relatados como mediana e intervalo interquartil.
+   - A razão é a mediana das diferenças dividida pela mediana dos tempos sem captura.
+4. **Tamanho em bytes dos 134 fingerprints versionados:** total, mínimo, mediana e máximo.
+
+Os quartis são calculados por interpolação linear entre os valores ordenados (tipo 7 de Hyndman e Fan, o padrão do R e do NumPy).
+
+*Regras de relato, fixadas antes dos dados.*
+- Vale para as comparações de ponta a ponta (métricas 2 e 3), cada uma separadamente. Se o intervalo interquartil da diferença pareada contiver o zero, o resultado é "diferença de ponta a ponta não distinguível do ruído da rede", sempre acompanhado do custo direto (métrica 1).
+- Nenhuma exclusão, nenhum par extra e nenhuma troca de estatística depois de ver os dados. Os únicos dados que ficam de fora são os previstos aqui: o aquecimento e os pares com um lado não medido.
+
+*Entrega.*
+- Orquestrador próprio, que simula por padrão e tem `--run` e `--resume`, como o do harness.
+- A rodada fica em `experiments/runs/<rodada>/` e é copiada sem edição para `experiments/results/overhead-captura-<rodada>/`, com manifesto SHA-256 e o log do console.
+- Entrada no caderno com ambiente, commit, comando, duração e anomalias.
+- A execução só acontece depois deste ADR commitado e de autorização explícita.
+- Nenhuma análise da rodada principal começa antes da integração do PR dos dados dela.
+
+**Alternativas consideradas.**
+- (a) Diretório de captura em `%TEMP%`, como na ida e volta: descartado. O custo de gravação tem de ser o do disco onde a baseline mora, e `%TEMP%` pode ter outro disco ou outro tratamento do antivírus.
+- (b) Diretório vazio também com a captura ligada: descartado, porque mediria a criação de arquivos, e o uso real sobrescreve.
+- (c) Gravar direto em `healing/fingerprints/`: descartado, porque arrisca alterar a baseline versionada.
+- (d) Medir dentro da rodada principal, ligando a captura numa das condições: descartado. Misturaria o custo da captura com o do mecanismo e mudaria uma rodada já executada.
+- (e) Manter a interceptação do ADR-029: descartado. Ela não existe no uso real e acrescentou cerca de 1,1 s por teste no segundo piloto, mais que o efeito procurado.
+- (f) O worker gravar os tempos direto em arquivo: descartado, porque a escrita em disco cairia dentro do tempo do teste, e só na condição ligada.
+- (g) Aquecimento com a captura desligada: descartado. Aqueceria a rede e o navegador, mas não o caminho de gravação. A captura ligada exercita os dois.
+- (h) Média e desvio padrão: descartado. Uma execução com um atraso de rede dominaria as duas medidas, e a mediana com o intervalo interquartil não sofre disso.
+
+**Consequência.**
+- O custo da captura passa a ter duas leituras: o custo direto, por chamada, que não depende da rede, e a diferença de ponta a ponta, que depende. A regra de relato já fixa como cada uma aparece no texto.
+- `withCapture` ganha um ponto de extensão que fica inerte fora da medição.
+- A instrumentação custa um pouco, e só na condição ligada: duas leituras de relógio e uma anotação em memória por chamada. Esse custo puxa o overhead medido para cima, nunca para baixo.

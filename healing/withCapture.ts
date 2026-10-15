@@ -96,6 +96,53 @@ function captureEnabled(): boolean {
   return process.env.HEALING_CAPTURE !== 'off';
 }
 
+/** Duração de uma etapa da captura numa chamada de `withCapture`. */
+export interface CaptureTiming {
+  phase: 'extract' | 'persist';
+  selector: string;
+  url: string;
+  /** Na extração, se ela produziu fingerprint; na gravação, se havia fingerprint a gravar. */
+  fingerprint: boolean;
+  ms: number;
+}
+
+export type CaptureTimingCollector = (timing: CaptureTiming) => void;
+
+let timingCollector: CaptureTimingCollector | null = null;
+
+/**
+ * Liga a medição da duração de cada extração e de cada gravação, para medir o
+ * custo da captura. Sem coletor, que é o padrão, nada é medido. A medição só lê
+ * o relógio: não muda a ordem extrair → agir → persistir nem o que é gravado, e
+ * com a captura desligada não há o que medir.
+ */
+export function configureCaptureTimings(collector: CaptureTimingCollector | null): void {
+  timingCollector = collector;
+}
+
+async function timedExtract(context: CaptureContext, locator: Locator): Promise<Fingerprint | null> {
+  const collector = timingCollector;
+  if (!collector) {
+    return extractFingerprint(context, locator);
+  }
+  const start = performance.now();
+  const fingerprint = await extractFingerprint(context, locator);
+  const ms = performance.now() - start;
+  collector({ phase: 'extract', selector: context.selector, url: context.url, fingerprint: fingerprint !== null, ms });
+  return fingerprint;
+}
+
+async function timedPersist(fingerprint: Fingerprint | null, context: CaptureContext): Promise<void> {
+  const collector = timingCollector;
+  if (!collector || !captureEnabled()) {
+    return persistFingerprint(fingerprint, context);
+  }
+  const start = performance.now();
+  await persistFingerprint(fingerprint, context);
+  const ms = performance.now() - start;
+  collector({ phase: 'persist', selector: context.selector, url: context.url, fingerprint: fingerprint !== null, ms });
+}
+
 /**
  * Grava o fingerprint extraído. Um `null` (extração falhou) é reportado via
  * `console.warn` em vez de ignorado: na Camada 2, "não capturou porque o
@@ -167,11 +214,11 @@ export async function withCapture<T>(
 
   // A extração só serve à persistência. Com a captura desligada ela seria custo
   // puro: sobre um locator quebrado, espera até CAPTURE_TIMEOUT_MS antes da ação.
-  const fingerprint = captureEnabled() ? await extractFingerprint(context, locator) : null;
+  const fingerprint = captureEnabled() ? await timedExtract(context, locator) : null;
 
   if (!healingEnabled()) {
     const result = await action(locator);
-    await persistFingerprint(fingerprint, context);
+    await timedPersist(fingerprint, context);
     return result;
   }
 
@@ -187,6 +234,6 @@ export async function withCapture<T>(
     }
     return recoverAndAct(page, { key: context, error, detectionWaitMs }, action);
   }
-  await persistFingerprint(fingerprint, context);
+  await timedPersist(fingerprint, context);
   return result;
 }

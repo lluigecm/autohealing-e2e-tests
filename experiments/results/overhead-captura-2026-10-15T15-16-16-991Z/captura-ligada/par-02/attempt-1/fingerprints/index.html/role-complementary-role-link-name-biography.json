@@ -1,0 +1,19 @@
+{
+  "selector": "role=complementary >> role=link[name=Biography]",
+  "url": "/index.html",
+  "tag": "a",
+  "text": "Biography",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": null,
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "li",
+    "parentSiblingIndex": 34,
+    "siblingIndex": 0,
+    "depth": 9
+  }
+}

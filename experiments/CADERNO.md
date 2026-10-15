@@ -351,3 +351,106 @@ Nada destoou, e a rodada seguiu.
 **Lacuna encontrada.** O `invocations.jsonl` não grava o horário de cada invocação. Só as invocações com healing ligado em que o mecanismo foi acionado têm horário, pelo `decidedAt`. Gravar o horário fica como melhoria para rodadas futuras, junto com o erro original no `catch` da reescrita e o ambiente completo no `plan.json`.
 
 **Anomalias.** Os dois avisos de esgotamento de portas acima.
+
+---
+
+## 2026-10-15 — Medição do custo da captura: código verificado offline
+
+**Objetivo.** Antes de qualquer execução contra o site, verificar sem rede o código da medição complementar do custo da captura (ADR-031, commit `fe7d254`).
+
+**Ambiente.** Node v24.14.0, Playwright 1.63.0, Windows 11 Home 10.0.26200, `playwright.unit.config.ts`. Sem rede.
+
+**Commit.** Working tree sobre `fe7d254`, com o código ainda não commitado. Ele entra no commit seguinte a esta entrada.
+
+**Mudanças de código.**
+- **Instrumentação.** `withCapture` ganhou um coletor opcional da duração de cada extração e de cada gravação. Sem coletor, nada é medido.
+- **Peças comuns, sem mudança de comportamento do harness:**
+  - os sinais de infraestrutura saíram de `experiments/harnessSetup.ts` para `experiments/infraSignals.ts`;
+  - a pré-verificação e o estado do git saíram de `experiments/harness.mts` para `experiments/runSupport.mts`;
+  - o laço de `experiments/runState.mts` ficou genérico no tipo da invocação e aceita um registro extra por tentativa.
+- **Novos:** o orquestrador `experiments/overhead.mts`, a config, o reporter e a instalação da medição, e a análise `experiments/overheadAnalysis.mts`. A análise foi escrita e testada antes de existir qualquer dado.
+
+**Comandos e resultados.**
+
+| Comando | Resultado |
+|---|---|
+| `npx tsc -p .` | Sem erros |
+| `npx playwright test --config=playwright.unit.config.ts` | 143/143. Eram 117; entraram 26 |
+| `node experiments/harness.mts` (simulação) | Igual à de antes: 103 entradas, 206 invocações, 4.040 execuções, ordem 52/51 |
+| `node experiments/overhead.mts` (simulação) | 21 invocações (aquecimento + 10 pares), 1.386 execuções, 5 pares abrindo por cada condição, cerca de 19 min estimados |
+| `npx playwright test --config experiments/overhead.config.ts --list` | Sem as variáveis do orquestrador, recusa rodar. Com elas, lista os 66 testes nas duas condições. Nenhum teste executado |
+
+Os 26 unitários novos cobrem:
+- os mesmos bytes gravados e o mesmo resultado da ação, com e sem coletor;
+- nada medido com a captura desligada;
+- `healing/fingerprints/` como diretório padrão;
+- o plano e a alternância dos pares;
+- a verificação da captura, inclusive o arquivo pré-carregado que não foi regravado;
+- a leitura dos 134 fingerprints a partir do git;
+- as proteções do ambiente;
+- o quantil tipo 7, a regra de relato e as quatro métricas sobre uma rodada fictícia.
+
+**Não verificado offline.** O caminho completo coletor → anotação → reporter só roda com os testes navegando no site. Ele será conferido nas primeiras invocações da rodada.
+
+**Anomalias.** Nenhuma.
+
+---
+
+## 2026-10-15 — Medição do custo da captura
+
+**Autorização.** Dada pelo usuário na mensagem imediatamente anterior ao início.
+
+**Programas abertos.** Segundo o usuário, nenhum. A declaração não cobre os serviços do Windows. O VS Code com o Claude Code, que disparou a rodada, estava aberto. A lista de processos de cada tentativa, no início e no fim, está em `processos-inicio.csv` e `processos-fim.csv`, no diretório da tentativa.
+
+**Ambiente.** Gravado no `plan.json` pelo orquestrador.
+- Máquina: AMD Ryzen 7 5700G (16 threads), 16 GB de RAM.
+- Windows 11 Home, build **26200.9711**.
+- Node v24.14.0, Playwright 1.63.0, Chromium 153.0.8010.12.
+- `experiments/overhead.config.ts`: 2 workers, `retries: 0`, sem `actionTimeout`, healing desligado.
+- Plano de energia: "Equilibrado" no início e no fim de todas as 23 tentativas.
+- Último boot da máquina: 2026-10-15 às 07:27.
+
+**Diferença em relação à rodada principal.** A máquina é a mesma, mas o Windows foi atualizado entre as duas rodadas. A rodada principal rodou na build 26200.9457 (levantamento de 2026-10-14). As versões do Node, do Playwright e do Chromium são as mesmas.
+
+**Commit.** `f81e922`, com a árvore limpa (`plan.json`: `dirty: false`).
+
+**Comando.** `node experiments/overhead.mts --run`, com a saída completa em `experiments/runs/overhead.log`. Rodada `experiments/runs/overhead-captura-2026-10-15T15-16-16-991Z/`.
+
+**Duração real.** 27min32s, de 12:16:16 a 12:43:48 (horário local). A simulação estimava 19min09s. A diferença inclui duas reexecuções e cinco esperas de 15 s da pré-verificação (anomalias abaixo).
+
+**Conferência do aquecimento**, o caminho que não deu para verificar offline:
+- 66/66 testes passaram;
+- 231 extrações e 231 gravações registradas, todas com fingerprint;
+- os 134 arquivos regravados e idênticos aos versionados;
+- `healing/fingerprints/` inalterado.
+
+**Resultado resumido** (conferência operacional, não análise):
+- 21/21 invocações com desfecho "medida", nenhuma não medida e nenhum aborto. Os 10 pares estão completos.
+- Verificação da captura correta nas 23 tentativas:
+  - captura ligada: 134 arquivos, idênticos e regravados;
+  - captura desligada: diretório vazio.
+- `healing/fingerprints/` com o mesmo hash antes e depois de todas as tentativas.
+- 1.518 eventos de teste gravados, dos quais 1.386 nas últimas tentativas.
+
+**Anomalias.** As quatro primeiras caíram todas na condição desligada.
+
+1. **Reexecução por infraestrutura no par 3, captura desligada (12:21:10).** A tentativa 1 teve 1 execução inválida: sinal `navigation-failed` com `net::ERR_TIMED_OUT`, e o teste terminou em `timedOut`. A tentativa 2 teve 66/66 válidas.
+2. **Reexecução por infraestrutura no par 7, captura desligada (12:31:20).** A tentativa 1 teve 16 execuções inválidas, todas `navigation-failed` com `net::ERR_CERT_AUTHORITY_INVALID`: o navegador não reconheceu a autoridade do certificado do site nessas navegações. A tentativa 2, 16 s depois, teve 66/66 válidas. A causa não foi determinada: pode ter sido um problema no certificado servido naquele momento ou uma interceptação de TLS no caminho.
+3. **Teste falhando sem sinal de infraestrutura no par 5, captura desligada (12:26:44).** `pagination.spec.ts › avança para a próxima página e exibe produtos diferentes` falhou em `expect(secondPageTitles.length).toBeGreaterThan(0)`: a segunda página veio com 0 títulos. Pela regra do ADR-028, um teste sem sinal estruturado não é reexecutado, e o desfecho dele é dado. Pelo ADR-031, nenhuma execução é excluída, então esta entra na análise. O `error-context` do Playwright se perdeu, porque `test-results/` é limpo a cada invocação. A primeira linha do erro está no evento do teste, e a mensagem completa, no log do console.
+4. **Pré-verificação falhou cinco vezes**, sempre com `TypeError: fetch failed`:
+   - antes da 2ª tentativa do par 3;
+   - antes da 2ª tentativa do par 7;
+   - antes do lado desligado do par 8;
+   - antes do lado desligado do par 9;
+   - antes do lado ligado do par 10.
+
+   Em todas, a tentativa seguinte, 15 s depois, passou, então nenhuma levou a aborto. As esperas ficam fora do tempo medido de cada execução. O `catch` grava só a mensagem do `fetch`, não a causa interna, então o motivo não é conhecido.
+5. **Log System do Windows de 12:16 a 12:44:** nenhum evento.
+
+**Cópia oficial.** O diretório da rodada foi copiado sem edição para `experiments/results/overhead-captura-2026-10-15T15-16-16-991Z/`.
+- O log do console foi copiado como `console.log`.
+- `diff -r` não mostrou diferenças, e `cmp` confirmou o log idêntico.
+- O manifesto `MANIFEST.sha256` tem 1.599 linhas, com os hashes calculados a partir dos originais: os 1.598 arquivos da rodada e o log.
+- `sha256sum -c MANIFEST.sha256`, rodado dentro do diretório, confere os 1.599 arquivos.
+- São 1.600 arquivos e 6,0 MB no total.
+- **Caminhos longos.** As cópias dos fingerprints de cada tentativa chegam a 315 caracteres de caminho absoluto, acima do limite de 260 do Windows: o `git add` recusou 242 arquivos. Com `git config core.longpaths true`, ativado só neste repositório e com o aval do usuário, os 1.600 arquivos entraram. O hash de cada blob no índice confere com os bytes crus do arquivo correspondente. Quem clonar o repositório no Windows precisa da mesma configuração para fazer o checkout desse diretório.

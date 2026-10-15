@@ -1,0 +1,19 @@
+{
+  "selector": "role=heading[level=1]",
+  "url": "/catalogue/scott-pilgrims-precious-little-life-scott-pilgrim-1_987/index.html",
+  "tag": "h1",
+  "text": "Scott Pilgrim's Precious Little Life (Scott Pilgrim #1)",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": null,
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 0,
+    "depth": 7
+  }
+}

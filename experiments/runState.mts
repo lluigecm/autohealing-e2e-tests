@@ -2,21 +2,26 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeF
 import path from 'node:path';
 
 /**
- * Estado e laço de execução de uma rodada do harness, sem rede nem Playwright:
- * a pré-verificação e a execução de cada tentativa são injetadas. O
- * orquestrador (`harness.mts`) liga as versões reais; os unitários, versões
- * falsas sobre um diretório de rodada fictício.
+ * Estado e laço de execução de uma rodada, sem rede nem Playwright: a
+ * pré-verificação e a execução de cada tentativa são injetadas. Os
+ * orquestradores (`harness.mts` e `overhead.mts`) ligam as versões reais; os
+ * unitários, versões falsas sobre um diretório de rodada fictício.
  */
+
+/** O mínimo que o laço precisa de uma invocação: a chave (entrada, condição) e o tamanho. */
+export interface RunInvocation {
+  entryId: string;
+  condition: string;
+  repeatEach: number;
+  tests: string[];
+}
 
 export type Condition = 'healing-off' | 'healing-on';
 
-export interface Invocation {
-  entryId: string;
+export interface Invocation extends RunInvocation {
   group: string;
   locator: 'inerte' | 'quebra' | 'desvia';
   condition: Condition;
-  repeatEach: number;
-  tests: string[];
 }
 
 export interface AttemptResult {
@@ -27,6 +32,8 @@ export interface AttemptResult {
   executions: number;
   expectedExecutions: number;
   invalidExecutions: number;
+  /** Registro extra da tentativa, gravado como está em `invocations.jsonl`. */
+  details?: Record<string, unknown>;
 }
 
 export function invocationKey(inv: { entryId?: unknown; condition?: unknown }): string {
@@ -44,8 +51,8 @@ function stampOf(date: Date): string {
   return date.toISOString().replace(/[:.]/g, '-');
 }
 
-export interface ResumePlan {
-  plan: Invocation[];
+export interface ResumePlan<I extends RunInvocation = Invocation> {
+  plan: I[];
   /** Invocações com desfecho em `outcomes.jsonl`: nunca rodam de novo. */
   done: Set<string>;
   /** Invocações sem desfecho cujas tentativas parciais foram para `interrompidas/`. */
@@ -59,10 +66,14 @@ export interface ResumePlan {
  * das demais vão para `interrompidas/<momento>/`, para auditoria, e elas rodam
  * do início. Lança erro, sem mexer em nada, se o commit for outro.
  */
-export function prepareResume(runDir: string, headCommit: string, now: Date = new Date()): ResumePlan {
+export function prepareResume<I extends RunInvocation = Invocation>(
+  runDir: string,
+  headCommit: string,
+  now: Date = new Date(),
+): ResumePlan<I> {
   const saved = JSON.parse(readFileSync(path.join(runDir, 'plan.json'), 'utf8')) as {
     git: { commit: string };
-    plan: Invocation[];
+    plan: I[];
   };
   if (saved.git.commit !== headCommit) {
     throw new Error(`retomada recusada: a rodada é do commit ${saved.git.commit} e o HEAD é ${headCommit}`);
@@ -92,10 +103,10 @@ export function prepareResume(runDir: string, headCommit: string, now: Date = ne
   return { plan: saved.plan, done, moved };
 }
 
-export interface RunDeps {
+export interface RunDeps<I extends RunInvocation = Invocation> {
   /** `null` quando a home está saudável; senão, as falhas observadas nas três tentativas. */
   precheck: () => Promise<string[] | null>;
-  runAttempt: (runDir: string, listFile: string, inv: Invocation, attempt: number) => AttemptResult;
+  runAttempt: (runDir: string, listFile: string, inv: I, attempt: number) => AttemptResult;
   log?: (line: string) => void;
   now?: () => Date;
 }
@@ -116,9 +127,9 @@ export type RunOutcome =
  * previstas) aborta a rodada **sem desfecho**: nunca é gravada como medida, e
  * a retomada a refaz.
  */
-export async function executeRun(
-  run: { runDir: string; plan: Invocation[]; done: Set<string> },
-  deps: RunDeps,
+export async function executeRun<I extends RunInvocation = Invocation>(
+  run: { runDir: string; plan: I[]; done: Set<string> },
+  deps: RunDeps<I>,
 ): Promise<RunOutcome> {
   const { runDir, plan, done } = run;
   const log = deps.log ?? (() => undefined);
@@ -126,7 +137,7 @@ export async function executeRun(
   const listsDir = path.join(runDir, 'lists');
   mkdirSync(listsDir, { recursive: true });
 
-  const abort = (exitCode: 2 | 4, index: number, inv: Invocation, attempt: number, problems: string[]): RunOutcome => {
+  const abort = (exitCode: 2 | 4, index: number, inv: I, attempt: number, problems: string[]): RunOutcome => {
     const aborted = { at: now().toISOString(), invocation: index + 1, entryId: inv.entryId, condition: inv.condition, attempt, problems };
     writeFileSync(path.join(runDir, 'aborted.json'), `${JSON.stringify(aborted, null, 2)}\n`);
     return { status: 'aborted', exitCode, reason: problems.join('; ') };

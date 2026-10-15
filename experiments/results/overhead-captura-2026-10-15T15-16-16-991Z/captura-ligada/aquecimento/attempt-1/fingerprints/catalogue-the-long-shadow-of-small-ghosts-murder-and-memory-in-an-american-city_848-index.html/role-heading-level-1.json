@@ -1,0 +1,19 @@
+{
+  "selector": "role=heading[level=1]",
+  "url": "/catalogue/the-long-shadow-of-small-ghosts-murder-and-memory-in-an-american-city_848/index.html",
+  "tag": "h1",
+  "text": "The Long Shadow of Small Ghosts: Murder and Memory in an American City",
+  "attributes": {
+    "stable": {},
+    "volatile": {
+      "class": null,
+      "id": null
+    }
+  },
+  "position": {
+    "parentTag": "div",
+    "parentSiblingIndex": 1,
+    "siblingIndex": 0,
+    "depth": 7
+  }
+}
