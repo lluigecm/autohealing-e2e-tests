@@ -785,3 +785,42 @@ Os quartis são calculados por interpolação linear entre os valores ordenados 
 - O custo da captura passa a ter duas leituras: o custo direto, por chamada, que não depende da rede, e a diferença de ponta a ponta, que depende. A regra de relato já fixa como cada uma aparece no texto.
 - `withCapture` ganha um ponto de extensão que fica inerte fora da medição.
 - A instrumentação custa um pouco, e só na condição ligada: duas leituras de relógio e uma anotação em memória por chamada. Esse custo puxa o overhead medido para cima, nunca para baixo.
+
+---
+
+## ADR-032 — Decisões tomadas depois dos dados da rodada principal: entradas não acionadas, escolhas de cálculo e citação de ADRs na análise
+
+**Data:** 2026-10-17 · **Etapa:** análise dos resultados · **Status:** aceito; **decidido depois de ver os dados** da rodada principal e da medição da captura (análise do commit `5363080`). Nada aqui foi fixado antes da medição, e nenhum item muda o mecanismo, a rodada ou a regra de denominador.
+
+**Contexto.** A análise aplicou as regras registradas antes da medição (ADR-020 e ADR-024 a ADR-027, mais o ADR-031) e encontrou quatro pontos que elas não fixavam. (1) O M5-T4 não tem `replace` nem `fail` em todas as execuções: o mecanismo não foi acionado em nenhuma das 3, porque `hasNextPage()` usa `isVisible()`, que devolve `false` sem lançar exceção. O ADR-025 só define "a favor" (`fail` em todas) e "contra" (algum `replace`). O M2-T4 tem a mesma causa na recuperação. (2) O custo passivo do ADR-027 não diz como reduzir as 3 repetições de um par (entrada, teste) a uma diferença. (3) A sensibilidade do limiar do adendo do ADR-027 não fixa a grade. (4) O ADR-024 define "não acionado" como "o locator resolveu e não há entrada de log", e o log não registra se o locator resolveu. Por fim, o resumo da análise foi pedido com o ADR de cada regra ao lado de cada número, e isso contraria a regra de não citar ADR em arquivo versionado.
+
+**Decisão.**
+
+*Entradas não acionadas.*
+- O M5-T4 é classificado como **não acionado**. Não é falso positivo, porque não houve `replace`, e não conta a favor do mecanismo, porque não houve `fail`.
+- O resultado principal do falso positivo continua **1/24**, com o denominador da matriz versionada (ADR-024). Ao lado, aparece **1/23**, sem a entrada não acionada. A conclusão não depende da escolha: o único falso positivo é o M5-T10 nos dois casos.
+- O M2-T4 segue a mesma lógica na recuperação: resultado principal **3/6**, pelo ADR-024, e ao lado **3/5**, sem a entrada não acionada.
+
+*Escolhas que os ADRs não fixavam.*
+- **Custo passivo:** a diferença de cada par é a mediana das durações da condição ligada menos a da desligada. Com N = 1 (649 dos 825 pares, das entradas inertes), é a própria diferença. A escolha só pesa nos 176 pares com N = 3.
+- **Sensibilidade do limiar:** grade fixa de 0,00 a 1,00, de 0,05 em 0,05. O limiar principal, 0,7, é um dos pontos da grade, e os scores exatos de cada entrada são publicados ao lado.
+- **Rótulo do M2-T4:** "não acionado" significa "sem entrada de log". O log não registra se o locator resolveu.
+- Nenhuma das três altera os resultados principais. A recuperação (3/6) e o falso positivo (1/24) não usam nem o custo passivo nem a grade. O M2-T4 é não recuperado com qualquer rótulo, porque só "sucesso" conta.
+
+*Citação de ADRs na análise.* O script da análise (`experiments/resultsAnalysis.mts`), as tabelas e o resumo gerados em `experiments/analysis/` podem citar ADRs. É a mesma exceção do caderno de experimentos: o objetivo é que cada número aponte para a regra que o produziu. A regra de não citar ADR continua valendo para os outros arquivos versionados. O `git grep -E "ADR|DECISIONS"` passa a excluir também esses dois caminhos.
+
+**Achado registrado (M5-T10, sem mudança no mecanismo).** O M5-T10 é o único falso positivo: `replace` em 48/48 execuções, sempre com score 0,925.
+- O fingerprint de baseline do rating (T10) tem `text` vazio: o elemento não tem texto, e a nota está só na classe (`star-rating One`, por exemplo).
+- A corroboração por texto fica inaplicável (`text-corroboration-unavailable`) e, pelo ADR-014, não desconta nada: ausência de corroboração não é contradição.
+- Com o elemento removido, a heurística estrutural escolhe o vizinho no mesmo pai. É o irmão na posição do fingerprint de disponibilidade (T9) da mesma página.
+- A defesa contra o falso positivo posicional do ADR-012 é justamente a corroboração por texto, e ela não existe para alvos sem texto.
+- Tratar a corroboração indisponível de forma conservadora fica como **trabalho futuro**. Exemplos: um teto para o score quando o fingerprint não tem texto, ou um sinal independente de posição para esses alvos. O mecanismo avaliado é o que rodou.
+
+**Alternativas consideradas.**
+- (a) Retirar o M5-T4 e o M2-T4 dos denominadores: descartado como resultado principal. Mudaria o denominador depois de ver os dados, o que o ADR-024 proíbe. Aparece só ao lado, para mostrar que a conclusão não depende disso.
+- (b) Contar o M5-T4 como a favor do mecanismo: descartado. Sem `fail`, o mecanismo não rejeitou nada.
+- (c) Contar o M5-T4 como falso positivo, pelo princípio "na dúvida, contra o mecanismo": descartado. O falso positivo do ADR-025 é definido por `replace`, e não houve substituição.
+- (d) Calcular agora a métrica de localização correta: descartado, porque ela não foi registrada antes dos dados.
+- (e) Ajustar o tratamento da corroboração indisponível e repetir a rodada: fora do escopo. Seria calibrar o mecanismo nos dados de avaliação (adendo do ADR-027).
+
+**Consequência.** O resumo da análise traz 1/24 com 1/23 ao lado e 3/6 com 3/5 ao lado, cada par apontando para este ADR. As três escolhas de cálculo ficam registradas como posteriores aos dados. O falso positivo do M5-T10 entra no texto como achado sobre os alvos sem texto, não como defeito corrigido.

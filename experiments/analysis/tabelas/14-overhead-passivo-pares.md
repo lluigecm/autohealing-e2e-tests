@@ -830,4 +830,4 @@ Regra: ADR-027; mediana e intervalo mínimo–máximo, ADR-026. Gerado por `expe
 | M5-T2 | tests/product-details.spec.ts › produto de "Default" exibe o preço no formato esperado e a informação de estoque | 3 | 2426,0 | 3 | 2306,0 | 120,0 |
 | M5-T2 | tests/product-details.spec.ts › produto de "Default" exibe uma classificação por estrelas válida (1 a 5) | 3 | 2463,0 | 3 | 2498,0 | -35,0 |
 
-Diferença de cada par: mediana das durações da condição ligada menos a da desligada (com N = 1, a própria duração).
+Diferença de cada par: mediana das durações da condição ligada menos a da desligada (com N = 1, a própria duração). Escolha de cálculo registrada depois dos dados, ADR-032, decidido depois dos dados.

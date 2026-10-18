@@ -3,6 +3,7 @@ import {
   aggregateFalsePositive,
   aggregateRecovery,
   aggregateRecoveryAt,
+  candidateSiblingIndex,
   classifyCosmetic,
   classifyCosmeticAt,
   classifyDefect,
@@ -45,11 +46,12 @@ test.describe('agregação por entrada', () => {
     expect(aggregateRecovery([])).toBe('não recuperada');
   });
 
-  test('falso positivo com um replace; a favor só com fail em todas; o resto fica sem desfecho', () => {
+  test('falso positivo com um replace; a favor só com fail em todas; sem log em todas, não acionado', () => {
     expect(aggregateFalsePositive(['fail', 'fail', 'replace'])).toBe('falso positivo');
+    expect(aggregateFalsePositive(['não acionado', 'replace'])).toBe('falso positivo');
     expect(aggregateFalsePositive(['fail', 'fail'])).toBe('fail em todas');
-    expect(aggregateFalsePositive(['fail', 'não acionado'])).toBe('nem fail em todas nem replace');
-    expect(aggregateFalsePositive(['não acionado'])).toBe('nem fail em todas nem replace');
+    expect(aggregateFalsePositive(['não acionado', 'não acionado'])).toBe('não acionado');
+    expect(aggregateFalsePositive(['fail', 'não acionado'])).toBe('fail e não acionado');
   });
 });
 
@@ -77,6 +79,15 @@ test.describe('sensibilidade do limiar', () => {
 
   test('fail que vira replace no elemento errado: cura incorreta, sem depender do teste', () => {
     expect(classifyCosmeticAt([fail(false, 0.5)], false, 0.5)).toBe('cura incorreta');
+  });
+});
+
+test.describe('posição do candidato', () => {
+  test('índice base 0 pelo último :nth-child do seletor registrado', () => {
+    expect(candidateSiblingIndex("locator('body > :nth-child(2) > :nth-child(1) > :nth-child(3)')")).toBe(2);
+    expect(candidateSiblingIndex('body > :nth-child(1)')).toBe(0);
+    expect(candidateSiblingIndex(null)).toBeNull();
+    expect(candidateSiblingIndex("locator('h1')")).toBeNull();
   });
 });
 

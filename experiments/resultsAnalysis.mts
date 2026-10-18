@@ -29,7 +29,7 @@ const CAPTURE_RUN = 'experiments/results/overhead-captura-2026-10-15T15-16-16-99
 const OUT_DIR = 'experiments/analysis';
 /** Limiar da rodada principal (resultado principal). */
 const MAIN_THRESHOLD = 0.7;
-/** Grade da análise de sensibilidade: 0,00 a 1,00 de 0,05 em 0,05, fixada sem olhar os scores. */
+/** Grade da análise de sensibilidade: 0,00 a 1,00 de 0,05 em 0,05 (escolha registrada depois dos dados). */
 const SENSITIVITY_GRID = Array.from({ length: 21 }, (_, i) => i / 20);
 
 /** Onde está cada regra aplicada; aparece ao lado de cada número no resumo. */
@@ -49,6 +49,9 @@ const RULE = {
   captureOverhead: 'ADR-031',
   sensitivity: 'ADR-027 (adendo)',
   threshold: 'ADR-016',
+  textCorroboration: 'ADR-014',
+  positionalFalsePositive: 'ADR-012',
+  postData: 'ADR-032, decidido depois dos dados',
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -95,6 +98,8 @@ export interface LogEntry {
   threshold: number;
   flags: string[];
   reason: string | null;
+  candidate: string | null;
+  factors: { disagreement: number; ambiguity: number; text: number } | null;
   candidateIsOracle: boolean | null;
   run: { entryId: string; testId: string; repetition: number; condition: string } | null;
   timings: { detectionWaitMs: number; recoveryMs: number; actionMs: number | null };
@@ -161,19 +166,23 @@ export function aggregateRecovery(classes: CosmeticClass[]): 'recuperada' | 'nã
   return classes.length > 0 && classes.every((c) => c === 'sucesso') ? 'recuperada' : 'não recuperada';
 }
 
-export type FalsePositiveOutcome = 'falso positivo' | 'fail em todas' | 'nem fail em todas nem replace';
+export type FalsePositiveOutcome = 'falso positivo' | 'fail em todas' | 'não acionado' | 'fail e não acionado';
 
 /**
  * A favor do mecanismo: `fail` em todas as execuções. Contra: basta um
- * `replace`. Uma entrada sem nenhum `replace` e com alguma execução em que o
- * mecanismo não foi acionado não cai em nenhum dos dois lados da regra, e é
- * relatada assim, sem ser resolvida aqui.
+ * `replace`. Sem nenhum `replace` e sem nenhuma entrada de log, a entrada é
+ * "não acionado": não é falso positivo nem conta a favor (decidido depois dos
+ * dados). A mistura de `fail` com execuções não acionadas não foi decidida e
+ * fica com rótulo próprio.
  */
 export function aggregateFalsePositive(classes: DefectClass[]): FalsePositiveOutcome {
   if (classes.some((c) => c === 'replace')) {
     return 'falso positivo';
   }
-  return classes.length > 0 && classes.every((c) => c === 'fail') ? 'fail em todas' : 'nem fail em todas nem replace';
+  if (classes.length > 0 && classes.every((c) => c === 'fail')) {
+    return 'fail em todas';
+  }
+  return classes.every((c) => c === 'não acionado') ? 'não acionado' : 'fail e não acionado';
 }
 
 /** Decisão que o mesmo score teria com outro limiar (inclusivo); sem score, sempre `fail`. */
@@ -350,6 +359,51 @@ function logEntries(dir: string): LogEntry[] {
     .filter((name) => path.basename(name).startsWith('healing-') && name.endsWith('.jsonl'))
     .sort()
     .flatMap((name) => readJsonl(path.join(dir, name)) as unknown as LogEntry[]);
+}
+
+interface BaselineFingerprint {
+  selector: string;
+  url: string;
+  text: string;
+  position: { parentTag: string | null; parentSiblingIndex: number | null; siblingIndex: number; depth: number };
+}
+
+/**
+ * Fingerprints de baseline por `url|selector`, lidos de `healing/fingerprints/`
+ * depois de conferir que o diretório é idêntico ao do commit da rodada.
+ */
+function loadBaselineFingerprints(commit: string): Map<string, BaselineFingerprint> {
+  const diff = spawnSync('git', ['diff', '--quiet', commit, '--', 'healing/fingerprints'], { cwd: ROOT });
+  if (diff.status !== 0) {
+    throw new Error(`healing/fingerprints/ difere do commit da rodada ${commit}`);
+  }
+  const dir = path.join(ROOT, 'healing', 'fingerprints');
+  const map = new Map<string, BaselineFingerprint>();
+  for (const file of listFilesRecursive(dir).filter((name) => name.endsWith('.json'))) {
+    const fp = readJson<BaselineFingerprint>(path.join(dir, file));
+    map.set(`${fp.url}|${fp.selector}`, fp);
+  }
+  return map;
+}
+
+/** Índice (base 0) do candidato entre os irmãos, pelo último `:nth-child` do seletor registrado. */
+export function candidateSiblingIndex(candidate: string | null): number | null {
+  const match = candidate?.match(/:nth-child\((\d+)\)'?\)?$/);
+  return match ? Number(match[1]) - 1 : null;
+}
+
+/** Seletor do fingerprint de baseline da mesma página que ocupa a posição do candidato. */
+function occupantOf(entry: LogEntry, target: BaselineFingerprint, baseline: Map<string, BaselineFingerprint>): string {
+  const index = candidateSiblingIndex(entry.candidate);
+  const same = [...baseline.values()].filter(
+    (fp) =>
+      fp.url === target.url &&
+      fp.position.parentTag === target.position.parentTag &&
+      fp.position.parentSiblingIndex === target.position.parentSiblingIndex &&
+      fp.position.depth === target.position.depth &&
+      fp.position.siblingIndex === index,
+  );
+  return same.length === 1 ? same[0].selector : same.length === 0 ? 'nenhum fingerprint nessa posição' : 'posição ambígua';
 }
 
 interface ManifestCheck {
@@ -801,6 +855,10 @@ export function buildAnalysis(): Map<string, string> {
     }
   }
   const recovered = recoveryMd.filter((r) => r.outcome === 'recuperada').length;
+  // Entradas sem nenhuma entrada de log em nenhuma execução: ficam no denominador; a fração sem elas vai ao lado.
+  const notTriggered = (id: string) => onKept(id).every((e) => e.log.length === 0);
+  const recoveryNotTriggered = recoveryIds.filter(notTriggered);
+  const recoverySide = `${frac(recovered, recoveryIds.length - recoveryNotTriggered.length)} sem ${recoveryNotTriggered.length === 1 ? 'a entrada não acionada' : 'as entradas não acionadas'} (${recoveryNotTriggered.join(', ')})`;
   addTable(out, {
     name: '07-recuperacao',
     title: `Recuperação: uma linha por entrada do denominador, limiar ${br(MAIN_THRESHOLD, 1)}`,
@@ -811,10 +869,11 @@ export function buildAnalysis(): Map<string, string> {
     ],
     rows: recoveryRows,
     notes: [
-      `Recuperadas: ${frac(recovered, recoveryIds.length)} entradas.`,
+      `Recuperadas: ${frac(recovered, recoveryIds.length)} entradas, com o denominador da matriz (${RULE.applied}).` +
+        (recoveryNotTriggered.length > 0 ? ` Ao lado: ${recoverySide}, ${RULE.postData}.` : ''),
       'As cinco colunas de classe são a contagem bruta k/N das execuções da entrada (descritiva; não entra na taxa nem a recalcula). O desfecho exige sucesso em todas as execuções.',
       'Score: valores distintos registrados no log da entrada. "Elemento certo" é o candidateIsOracle de cada entrada de log; uma execução pode ter mais de uma entrada de log.',
-      '"Não acionado" é a execução sem entrada de log. O log não registra se o locator resolveu: quando a ação não lança exceção (isVisible() devolve false, por exemplo), o locator pode não ter resolvido e mesmo assim não haver entrada. O detalhe por teste está em 12-divergencias-por-teste.',
+      `"Não acionado" é a execução sem entrada de log (${RULE.postData}). O log não registra se o locator resolveu: quando a ação não lança exceção (isVisible() devolve false, por exemplo), o locator pode não ter resolvido e mesmo assim não haver entrada. O detalhe por teste está em 12-divergencias-por-teste.`,
     ],
   });
   addTable(out, {
@@ -843,16 +902,20 @@ export function buildAnalysis(): Map<string, string> {
   }
   const fpCount = [...fpOutcome.values()].filter((o) => o === 'falso positivo').length;
   const fpFavor = [...fpOutcome.values()].filter((o) => o === 'fail em todas').length;
-  const fpNeither = fpIds.filter((id) => fpOutcome.get(id) === 'nem fail em todas nem replace');
+  const fpNotTriggered = fpIds.filter((id) => fpOutcome.get(id) === 'não acionado');
+  const fpMixed = fpIds.filter((id) => fpOutcome.get(id) === 'fail e não acionado');
+  const fpSide = `${frac(fpCount, fpIds.length - fpNotTriggered.length)} sem ${fpNotTriggered.length === 1 ? 'a entrada não acionada' : 'as entradas não acionadas'} (${fpNotTriggered.join(', ')})`;
   addTable(out, {
     name: '09-falso-positivo-entradas',
     title: `Falso positivo bruto, por entrada (k/${fpIds.length}), limiar ${br(MAIN_THRESHOLD, 1)}`,
-    rule: `relato bruto e por alvo, ${RULE.report}; agregação, ${RULE.classes}`,
+    rule: `relato bruto e por alvo, ${RULE.report}; agregação, ${RULE.classes}; entrada não acionada, ${RULE.postData}`,
     headers: ['entrada', 'alvo', 'instância', 'replace (execuções)', 'fail (execuções)', 'não acionado (execuções)', 'score', 'desfecho da entrada'],
     rows: fpRows,
     notes: [
-      `Falso positivo: ${frac(fpCount, fpIds.length)} entradas. Fail em todas as execuções: ${frac(fpFavor, fpIds.length)}. Nem fail em todas nem replace: ${frac(fpNeither.length, fpIds.length)}${fpNeither.length > 0 ? ` (${fpNeither.join(', ')})` : ''}.`,
-      'Uma entrada sem replace e com alguma execução em que o mecanismo não foi acionado não satisfaz nenhum dos dois lados da regra de agregação; ela fica fora do numerador do falso positivo e é listada à parte, sem resolução.',
+      `Falso positivo: ${frac(fpCount, fpIds.length)} entradas, com o denominador da matriz (${RULE.applied}).` +
+        (fpNotTriggered.length > 0 ? ` Ao lado: ${fpSide} (${RULE.postData}).` : ''),
+      `Fail em todas as execuções: ${frac(fpFavor, fpIds.length)}. Não acionado: ${frac(fpNotTriggered.length, fpIds.length)}${fpNotTriggered.length > 0 ? ` (${fpNotTriggered.join(', ')})` : ''}. Fail e não acionado na mesma entrada: ${frac(fpMixed.length, fpIds.length)}.`,
+      `Uma entrada não acionada não é falso positivo, porque não houve replace, e não conta a favor, porque não houve fail (${RULE.postData}).`,
     ],
   });
   const byTarget = new Map<string, string[]>();
@@ -863,10 +926,11 @@ export function buildAnalysis(): Map<string, string> {
   const targetRows: Cell[][] = [];
   for (const [target, ids] of byTarget) {
     const fp = ids.filter((id) => fpOutcome.get(id) === 'falso positivo').length;
-    const neither = ids.filter((id) => fpOutcome.get(id) === 'nem fail em todas nem replace').length;
-    targetRows.push([target, n(ids.length), ids.length > 1 ? `${fp} de ${ids.length} categorias` : frac(fp, 1), neither > 0 ? `${neither} sem desfecho pela regra` : '', fp > 0 ? 'falso positivo' : neither > 0 ? 'sem desfecho pela regra' : 'fail em todas']);
+    const idle = ids.filter((id) => fpOutcome.get(id) !== 'falso positivo' && fpOutcome.get(id) !== 'fail em todas').length;
+    targetRows.push([target, n(ids.length), ids.length > 1 ? `${fp} de ${ids.length} categorias` : frac(fp, 1), idle > 0 ? `${idle} com execução não acionada` : '', fp > 0 ? 'falso positivo' : idle > 0 ? 'não acionado' : 'fail em todas']);
   }
   const fpTargets = targetRows.filter((r) => r[4] === 'falso positivo').length;
+  const fpTargetsIdle = targetRows.filter((r) => r[4] === 'não acionado').length;
   const t1 = byTarget.get('T1') ?? [];
   const t1Fp = t1.filter((id) => fpOutcome.get(id) === 'falso positivo').length;
   addTable(out, {
@@ -875,7 +939,10 @@ export function buildAnalysis(): Map<string, string> {
     rule: RULE.report,
     headers: ['alvo', 'entradas', 'com falso positivo', 'observação', 'desfecho do alvo'],
     rows: targetRows,
-    notes: [`Alvos com falso positivo: ${frac(fpTargets, byTarget.size)}. T1: ${t1Fp} de ${t1.length} categorias.`],
+    notes: [
+      `Alvos com falso positivo: ${frac(fpTargets, byTarget.size)}. T1: ${t1Fp} de ${t1.length} categorias.` +
+        (fpTargetsIdle > 0 ? ` Ao lado, sem os alvos não acionados: ${frac(fpTargets, byTarget.size - fpTargetsIdle)} (${RULE.postData}).` : ''),
+    ],
   });
 
   // Fora dos denominadores ------------------------------------------------------
@@ -966,21 +1033,77 @@ export function buildAnalysis(): Map<string, string> {
     '',
     `Classes por execução e agregação "na dúvida, contra o mecanismo": ${RULE.classes}. Relato por entrada, fração com absoluto, falso positivo bruto e por alvo: ${RULE.report}.`,
     '',
-    `- **Recuperação: ${frac(recovered, recoveryIds.length)} entradas recuperadas** (${RULE.classes}). ${link('07-recuperacao')}`,
+    `- **Recuperação: ${frac(recovered, recoveryIds.length)} entradas recuperadas** (${RULE.classes}; denominador da matriz, ${RULE.applied})` +
+      (recoveryNotTriggered.length > 0 ? `; ao lado, ${recoverySide} (${RULE.postData})` : '') +
+      `. ${link('07-recuperacao')}`,
     ...recoveryMd.map((r) => `  - ${r.id}: ${r.outcome}`),
     `- Elemento certo, teste falha: ${categoryRows.filter((r) => r[0] === 'elemento certo, teste falha').map((r) => r[1]).join(', ') || 'nenhuma'}; cura incorreta (replace no elemento errado em mutação cosmética): ${categoryRows.filter((r) => r[0] === 'cura incorreta').map((r) => r[1]).join(', ') || 'nenhuma'} (${RULE.classes}). ${link('08-categorias-a-parte')}`,
-    `- **Falso positivo bruto: ${frac(fpCount, fpIds.length)} entradas**${fpCount > 0 ? ` (${fpIds.filter((id) => fpOutcome.get(id) === 'falso positivo').join(', ')})` : ''}; fail em todas: ${frac(fpFavor, fpIds.length)}; nem uma coisa nem outra pela regra: ${frac(fpNeither.length, fpIds.length)}${fpNeither.length > 0 ? ` (${fpNeither.join(', ')})` : ''} (${RULE.classes}). ${link('09-falso-positivo-entradas')}`,
-    `- **Falso positivo por alvo distinto: ${frac(fpTargets, byTarget.size)} alvos**; T1: ${t1Fp} de ${t1.length} categorias (${RULE.report}). ${link('10-falso-positivo-por-alvo')}`,
+    `- **Falso positivo bruto: ${frac(fpCount, fpIds.length)} entradas**${fpCount > 0 ? ` (${fpIds.filter((id) => fpOutcome.get(id) === 'falso positivo').join(', ')})` : ''} (${RULE.classes}; denominador da matriz, ${RULE.applied})` +
+      (fpNotTriggered.length > 0 ? `; ao lado, ${fpSide} (${RULE.postData})` : '') +
+      `. Fail em todas: ${frac(fpFavor, fpIds.length)}; não acionado: ${frac(fpNotTriggered.length, fpIds.length)}. ${link('09-falso-positivo-entradas')}`,
+    `- **Falso positivo por alvo distinto: ${frac(fpTargets, byTarget.size)} alvos**; T1: ${t1Fp} de ${t1.length} categorias (${RULE.report})` +
+      (fpTargetsIdle > 0 ? `; ao lado, sem os alvos não acionados, ${frac(fpTargets, byTarget.size - fpTargetsIdle)} (${RULE.postData})` : '') +
+      `. ${link('10-falso-positivo-por-alvo')}`,
     `- Fora dos denominadores (passa por engano e defect despercebido): ${deviateIds.join(', ')} (${RULE.report}). ${link('11-fora-dos-denominadores')}`,
     `- Testes com comportamento diferente da matriz: ${divRows.length}, em ${divEntries.size} entradas (${[...divEntries].join(', ') || 'nenhuma'}) (${RULE.perTestDivergence}). ${link('12-divergencias-por-teste')}`,
     `- Entradas inertes com entrada de log: ${inertWithLog.length} de ${inertIds.length} (${RULE.inert}). ${link('13-inertes-com-log')}`,
-    `- Métrica de localização correta: não está registrada no ${RULE.classes} e não foi calculada. O acerto do elemento aparece por entrada na coluna "elemento certo" da tabela de recuperação (${RULE.report}).`,
+    `- Métrica de localização correta: não foi registrada antes dos dados e não é calculada (${RULE.postData}). O acerto do elemento aparece por entrada na coluna "elemento certo" da tabela de recuperação (${RULE.report}).`,
     '',
   );
-  if (fpNeither.length > 0) {
+  if (fpNotTriggered.length + recoveryNotTriggered.length > 0) {
     divergences.push(
-      `Lacuna da regra de agregação (${RULE.classes}): ${fpNeither.join(', ')} não tem replace nem fail em todas as execuções, porque o mecanismo não foi acionado. A regra não define o desfecho dessa entrada; ela fica fora do numerador do falso positivo e listada à parte, sem resolução.`,
+      `Decidido depois dos dados (ADR-032): ${[...recoveryNotTriggered, ...fpNotTriggered].join(' e ')} ${recoveryNotTriggered.length + fpNotTriggered.length === 1 ? 'é classificada' : 'são classificadas'} como "não acionado", porque o mecanismo não foi acionado em nenhuma execução. Na recuperação, a entrada não acionada fica no denominador e fora do numerador; no falso positivo, não é falso positivo nem conta a favor. Resultados principais pelo denominador da matriz (${RULE.applied}), com a fração sem as não acionadas ao lado: recuperação ${frac(recovered, recoveryIds.length)} (${frac(recovered, recoveryIds.length - recoveryNotTriggered.length)}), falso positivo ${frac(fpCount, fpIds.length)} (${frac(fpCount, fpIds.length - fpNotTriggered.length)}).`,
     );
+  }
+  if (fpMixed.length > 0) {
+    divergences.push(`Entradas M5 com fail e execuções não acionadas ao mesmo tempo, sem regra registrada: ${fpMixed.join(', ')}.`);
+  }
+
+  // Achado: falsos positivos e a corroboração por texto -------------------------
+  const baseline = loadBaselineFingerprints(main.commit);
+  const findingRows: Cell[][] = [];
+  const findingText: string[] = [];
+  for (const id of fpIds.filter((x) => fpOutcome.get(x) === 'falso positivo')) {
+    const log = onKept(id).flatMap((e) => e.log).filter((e) => e.decision === 'replace');
+    const fps = log.map((e) => baseline.get(`${e.url}|${e.originalSelector}`));
+    if (fps.some((fp) => fp === undefined)) {
+      throw new Error(`${id}: entrada de log sem fingerprint de baseline correspondente`);
+    }
+    const emptyText = fps.filter((fp) => fp!.text.trim() === '').length;
+    const unavailable = log.filter((e) => e.flags.includes('text-corroboration-unavailable')).length;
+    const noDiscount = log.filter((e) => e.factors?.text === 1).length;
+    const occupants = log.map((e, i) => occupantOf(e, fps[i]!, baseline));
+    const occupantCounts = counts(occupants);
+    findingRows.push([
+      id, n(log.length), frac(emptyText, log.length), frac(unavailable, log.length), frac(noDiscount, log.length), scoreCell(log),
+      [...new Set(fps.map((fp) => String(fp!.position.siblingIndex)))].join('; '),
+      [...new Set(log.map((e) => String(candidateSiblingIndex(e.candidate))))].join('; '),
+      occupantCounts,
+    ]);
+    findingText.push(
+      `- **${id}:** replace em ${frac(onKept(id).filter((e) => classifyDefect(e.log) === 'replace').length, onKept(id).length)} execuções (${log.length} entradas de log), score ${scoreText(log)}. ` +
+        `O fingerprint de baseline tem \`text\` vazio em ${frac(emptyText, log.length)}; a corroboração por texto fica inaplicável (\`text-corroboration-unavailable\`) em ${frac(unavailable, log.length)} e, sem desconto, com fator de texto 1 em ${frac(noDiscount, log.length)} (${RULE.textCorroboration}). ` +
+        `Com o alvo removido, o candidato é o irmão no mesmo pai que, na baseline, ocupa a posição do fingerprint ${counts(occupants.map((o) => `\`${o}\``))}. ` +
+        `É o falso positivo posicional que a corroboração por texto deveria barrar (${RULE.positionalFalsePositive}), num alvo sem texto. ` +
+        `Registrado como achado, sem mudança no mecanismo; o tratamento conservador da corroboração indisponível fica como trabalho futuro (${RULE.postData}). ${link('22-achado-falso-positivo')}`,
+    );
+  }
+  addTable(out, {
+    name: '22-achado-falso-positivo',
+    title: 'Achado: falso positivo e corroboração por texto indisponível',
+    rule: `${RULE.textCorroboration}; ${RULE.positionalFalsePositive}; registrado como achado no ${RULE.postData}`,
+    headers: [
+      'entrada', 'entradas de log com replace', 'text vazio no fingerprint', 'corroboração indisponível', 'fator de texto 1', 'score',
+      'siblingIndex do alvo (baseline)', 'siblingIndex do candidato', 'fingerprint de baseline na posição do candidato',
+    ],
+    rows: findingRows,
+    empty: 'Nenhum falso positivo.',
+    notes: [
+      'Fingerprints de baseline de `healing/fingerprints/`, conferidos como idênticos aos do commit da rodada. O siblingIndex do candidato vem do último `:nth-child` do seletor registrado (base 0). A última coluna é o fingerprint da mesma página com o mesmo pai, a mesma profundidade e o siblingIndex do candidato.',
+    ],
+  });
+  if (findingText.length > 0) {
+    summary.push('## 5a. Achado: falso positivo com corroboração por texto indisponível', '', ...findingText, '');
   }
 
   // 7. Overhead da recuperação -------------------------------------------------
@@ -1012,7 +1135,7 @@ export function buildAnalysis(): Map<string, string> {
     rule: `${RULE.recoveryOverhead}; mediana e intervalo mínimo–máximo, ${RULE.interval}`,
     headers: ['entrada', 'teste', 'execuções ligada', 'mediana ligada (ms)', 'execuções desligada', 'mediana desligada (ms)', 'diferença (ms)'],
     rows: passiveRows,
-    notes: ['Diferença de cada par: mediana das durações da condição ligada menos a da desligada (com N = 1, a própria duração).'],
+    notes: [`Diferença de cada par: mediana das durações da condição ligada menos a da desligada (com N = 1, a própria duração). Escolha de cálculo registrada depois dos dados, ${RULE.postData}.`],
   });
   const perDecision = (d: 'replace' | 'fail') => stat(recoveryLog.filter((e) => e.decision === d).map((e) => e.timings.recoveryMs));
   addTable(out, {
@@ -1052,7 +1175,7 @@ export function buildAnalysis(): Map<string, string> {
   summary.push(
     '## 6. Overhead da recuperação',
     '',
-    `- **Custo passivo:** mediana de ${br(passive.median, 1)} ms por teste (mínimo ${br(passive.min, 1)}, máximo ${br(passive.max, 1)}), em ${passive.n} pares (entrada, teste) sem acionamento e com o teste passando nas duas condições (${RULE.recoveryOverhead}; intervalo mínimo–máximo, ${RULE.interval}). ${link('15-overhead-recuperacao')} · ${link('14-overhead-passivo-pares')}`,
+    `- **Custo passivo:** mediana de ${br(passive.median, 1)} ms por teste (mínimo ${br(passive.min, 1)}, máximo ${br(passive.max, 1)}), em ${passive.n} pares (entrada, teste) sem acionamento e com o teste passando nas duas condições (${RULE.recoveryOverhead}; intervalo mínimo–máximo, ${RULE.interval}; diferença de medianas por par, ${RULE.postData}). ${link('15-overhead-recuperacao')} · ${link('14-overhead-passivo-pares')}`,
     `- **Custo ativo:** recoveryMs com mediana de ${br(active.median, 1)} ms (mínimo ${br(active.min, 1)}, máximo ${br(active.max, 1)}), em ${active.n} tentativas (${RULE.recoveryOverhead}). ${link('16-overhead-recuperacao-por-entrada')}`,
     '',
   );
@@ -1136,7 +1259,7 @@ export function buildAnalysis(): Map<string, string> {
     notes: [
       'Recalculada offline a partir do score registrado em cada entrada de log (rawScore × fatores), sem nenhuma execução nova. É aproximada: o log só tem o caminho que o limiar 0,7 produziu, e uma substituição diferente mudaria o resto do teste.',
       '"Indeterminada": alguma execução passaria de fail para replace no elemento certo, e o desfecho do teste nesse caminho não foi observado. Nenhuma execução indeterminada conta como sucesso.',
-      'Grade fixa de 0,00 a 1,00, de 0,05 em 0,05, escolhida sem olhar os scores. Os scores exatos de cada entrada estão em 20-scores-por-entrada.',
+      `Grade fixa de 0,00 a 1,00, de 0,05 em 0,05, registrada depois dos dados (${RULE.postData}). Os scores exatos de cada entrada estão em 20-scores-por-entrada.`,
     ],
   });
   const scoreRows: Cell[][] = [];
@@ -1164,7 +1287,7 @@ export function buildAnalysis(): Map<string, string> {
   summary.push(
     '## 8. Sensibilidade do limiar (secundária e aproximada)',
     '',
-    `- Recalculada offline a partir dos scores registrados; **secundária e aproximada** (${RULE.sensitivity}). No limiar principal, ${br(MAIN_THRESHOLD, 1)}: recuperadas ${frac(at(MAIN_THRESHOLD).rec, recoveryIds.length)}, falso positivo bruto ${frac(at(MAIN_THRESHOLD).fp, fpIds.length)}. ${link('19-sensibilidade-limiar')} · ${link('20-scores-por-entrada')}`,
+    `- Recalculada offline a partir dos scores registrados; **secundária e aproximada** (${RULE.sensitivity}; grade de 0,05, ${RULE.postData}). No limiar principal, ${br(MAIN_THRESHOLD, 1)}: recuperadas ${frac(at(MAIN_THRESHOLD).rec, recoveryIds.length)}, falso positivo bruto ${frac(at(MAIN_THRESHOLD).fp, fpIds.length)}. ${link('19-sensibilidade-limiar')} · ${link('20-scores-por-entrada')}`,
     `- Em 0,65: recuperadas ${frac(at(0.65).rec, recoveryIds.length)} (indeterminadas ${at(0.65).ind}), falso positivo ${frac(at(0.65).fp, fpIds.length)}. Em 0,75: recuperadas ${frac(at(0.75).rec, recoveryIds.length)}, falso positivo ${frac(at(0.75).fp, fpIds.length)}.`,
     '',
   );

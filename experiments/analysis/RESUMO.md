@@ -8,7 +8,7 @@ Gerado por `node experiments/resultsAnalysis.mts` a partir de `experiments/resul
 
 ## Divergências e lacunas
 
-- Lacuna da regra de agregação (ADR-025): M5-T4 não tem replace nem fail em todas as execuções, porque o mecanismo não foi acionado. A regra não define o desfecho dessa entrada; ela fica fora do numerador do falso positivo e listada à parte, sem resolução.
+- Decidido depois dos dados (ADR-032): M2-T4-relabel e M5-T4 são classificadas como "não acionado", porque o mecanismo não foi acionado em nenhuma execução. Na recuperação, a entrada não acionada fica no denominador e fora do numerador; no falso positivo, não é falso positivo nem conta a favor. Resultados principais pelo denominador da matriz (ADR-024), com a fração sem as não acionadas ao lado: recuperação 3/6 (3/5), falso positivo 1/24 (1/23).
 - Previsão divergente — ADR-020 (tabela, coluna "mecanismo atual"), M2-T4-relabel: previsto "falhar: teto de 0,50"; observado: não acionado 3/3.
 - Previsão divergente — ADR-020 (tabela: M5 × T4–T10), M5-T4: previsto "falhar"; observado: não acionado 3/3.
 - Previsão divergente — ADR-020 (tabela: M5 × T4–T10), M5-T10: previsto "falhar"; observado: replace 48/48; score 0,925.
@@ -39,7 +39,7 @@ Gerado por `node experiments/resultsAnalysis.mts` a partir de `experiments/resul
 
 Classes por execução e agregação "na dúvida, contra o mecanismo": ADR-025. Relato por entrada, fração com absoluto, falso positivo bruto e por alvo: ADR-020.
 
-- **Recuperação: 3/6 entradas recuperadas** (ADR-025). [tabelas/07-recuperacao.md](tabelas/07-recuperacao.md)
+- **Recuperação: 3/6 entradas recuperadas** (ADR-025; denominador da matriz, ADR-024); ao lado, 3/5 sem a entrada não acionada (M2-T4-relabel) (ADR-032, decidido depois dos dados). [tabelas/07-recuperacao.md](tabelas/07-recuperacao.md)
   - M1-T8: recuperada
   - M1-T9: recuperada
   - M1-T10: não recuperada
@@ -47,16 +47,20 @@ Classes por execução e agregação "na dúvida, contra o mecanismo": ADR-025. 
   - M2-T1-sequential-art_5-append-token: recuperada
   - M2-T4-relabel: não recuperada
 - Elemento certo, teste falha: M1-T10; cura incorreta (replace no elemento errado em mutação cosmética): nenhuma (ADR-025). [tabelas/08-categorias-a-parte.md](tabelas/08-categorias-a-parte.md)
-- **Falso positivo bruto: 1/24 entradas** (M5-T10); fail em todas: 22/24; nem uma coisa nem outra pela regra: 1/24 (M5-T4) (ADR-025). [tabelas/09-falso-positivo-entradas.md](tabelas/09-falso-positivo-entradas.md)
-- **Falso positivo por alvo distinto: 1/9 alvos**; T1: 0 de 16 categorias (ADR-020). [tabelas/10-falso-positivo-por-alvo.md](tabelas/10-falso-positivo-por-alvo.md)
+- **Falso positivo bruto: 1/24 entradas** (M5-T10) (ADR-025; denominador da matriz, ADR-024); ao lado, 1/23 sem a entrada não acionada (M5-T4) (ADR-032, decidido depois dos dados). Fail em todas: 22/24; não acionado: 1/24. [tabelas/09-falso-positivo-entradas.md](tabelas/09-falso-positivo-entradas.md)
+- **Falso positivo por alvo distinto: 1/9 alvos**; T1: 0 de 16 categorias (ADR-020); ao lado, sem os alvos não acionados, 1/8 (ADR-032, decidido depois dos dados). [tabelas/10-falso-positivo-por-alvo.md](tabelas/10-falso-positivo-por-alvo.md)
 - Fora dos denominadores (passa por engano e defect despercebido): M3-T2, M3-T3, M5-T2 (ADR-020). [tabelas/11-fora-dos-denominadores.md](tabelas/11-fora-dos-denominadores.md)
 - Testes com comportamento diferente da matriz: 6, em 3 entradas (M2-T4-relabel, M5-T2, M5-T4) (ADR-024). [tabelas/12-divergencias-por-teste.md](tabelas/12-divergencias-por-teste.md)
 - Entradas inertes com entrada de log: 0 de 70 (ADR-026). [tabelas/13-inertes-com-log.md](tabelas/13-inertes-com-log.md)
-- Métrica de localização correta: não está registrada no ADR-025 e não foi calculada. O acerto do elemento aparece por entrada na coluna "elemento certo" da tabela de recuperação (ADR-020).
+- Métrica de localização correta: não foi registrada antes dos dados e não é calculada (ADR-032, decidido depois dos dados). O acerto do elemento aparece por entrada na coluna "elemento certo" da tabela de recuperação (ADR-020).
+
+## 5a. Achado: falso positivo com corroboração por texto indisponível
+
+- **M5-T10:** replace em 48/48 execuções (96 entradas de log), score 0,925. O fingerprint de baseline tem `text` vazio em 96/96; a corroboração por texto fica inaplicável (`text-corroboration-unavailable`) em 96/96 e, sem desconto, com fator de texto 1 em 96/96 (ADR-014). Com o alvo removido, o candidato é o irmão no mesmo pai que, na baseline, ocupa a posição do fingerprint `.product_main p.instock.availability` 96/96. É o falso positivo posicional que a corroboração por texto deveria barrar (ADR-012), num alvo sem texto. Registrado como achado, sem mudança no mecanismo; o tratamento conservador da corroboração indisponível fica como trabalho futuro (ADR-032, decidido depois dos dados). [tabelas/22-achado-falso-positivo.md](tabelas/22-achado-falso-positivo.md)
 
 ## 6. Overhead da recuperação
 
-- **Custo passivo:** mediana de -3,0 ms por teste (mínimo -3419,0, máximo 4433,0), em 825 pares (entrada, teste) sem acionamento e com o teste passando nas duas condições (ADR-027; intervalo mínimo–máximo, ADR-026). [tabelas/15-overhead-recuperacao.md](tabelas/15-overhead-recuperacao.md) · [tabelas/14-overhead-passivo-pares.md](tabelas/14-overhead-passivo-pares.md)
+- **Custo passivo:** mediana de -3,0 ms por teste (mínimo -3419,0, máximo 4433,0), em 825 pares (entrada, teste) sem acionamento e com o teste passando nas duas condições (ADR-027; intervalo mínimo–máximo, ADR-026; diferença de medianas por par, ADR-032, decidido depois dos dados). [tabelas/15-overhead-recuperacao.md](tabelas/15-overhead-recuperacao.md) · [tabelas/14-overhead-passivo-pares.md](tabelas/14-overhead-passivo-pares.md)
 - **Custo ativo:** recoveryMs com mediana de 27,9 ms (mínimo 9,4, máximo 77,9), em 930 tentativas (ADR-027). [tabelas/16-overhead-recuperacao-por-entrada.md](tabelas/16-overhead-recuperacao-por-entrada.md)
 
 ## 7. Overhead da captura (medição complementar)
@@ -69,7 +73,7 @@ Classes por execução e agregação "na dúvida, contra o mecanismo": ADR-025. 
 
 ## 8. Sensibilidade do limiar (secundária e aproximada)
 
-- Recalculada offline a partir dos scores registrados; **secundária e aproximada** (ADR-027 (adendo)). No limiar principal, 0,7: recuperadas 3/6, falso positivo bruto 1/24. [tabelas/19-sensibilidade-limiar.md](tabelas/19-sensibilidade-limiar.md) · [tabelas/20-scores-por-entrada.md](tabelas/20-scores-por-entrada.md)
+- Recalculada offline a partir dos scores registrados; **secundária e aproximada** (ADR-027 (adendo); grade de 0,05, ADR-032, decidido depois dos dados). No limiar principal, 0,7: recuperadas 3/6, falso positivo bruto 1/24. [tabelas/19-sensibilidade-limiar.md](tabelas/19-sensibilidade-limiar.md) · [tabelas/20-scores-por-entrada.md](tabelas/20-scores-por-entrada.md)
 - Em 0,65: recuperadas 3/6 (indeterminadas 0), falso positivo 1/24. Em 0,75: recuperadas 2/6, falso positivo 1/24.
 
 ## Gráficos

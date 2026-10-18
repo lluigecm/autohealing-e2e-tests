@@ -30,4 +30,4 @@ Recalculada offline a partir do score registrado em cada entrada de log (rawScor
 
 "Indeterminada": alguma execução passaria de fail para replace no elemento certo, e o desfecho do teste nesse caminho não foi observado. Nenhuma execução indeterminada conta como sucesso.
 
-Grade fixa de 0,00 a 1,00, de 0,05 em 0,05, escolhida sem olhar os scores. Os scores exatos de cada entrada estão em 20-scores-por-entrada.
+Grade fixa de 0,00 a 1,00, de 0,05 em 0,05, registrada depois dos dados (ADR-032, decidido depois dos dados). Os scores exatos de cada entrada estão em 20-scores-por-entrada.

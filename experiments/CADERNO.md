@@ -489,3 +489,21 @@ Os 26 unitários novos cobrem:
 4. **Lacuna da regra de agregação.** O M5-T4 não tem `replace` nem `fail` em todas as execuções. O ADR-025 não define o desfecho desse caso, e a análise o lista à parte, fora do numerador do falso positivo.
 
 **Anomalias.** Nenhuma na análise.
+
+---
+
+## 2026-10-17 — Decisões posteriores à análise
+
+**Objetivo.** Registrar o que a análise de 2026-10-15 deixou em aberto, depois da aprovação dela pelo usuário. Tudo foi decidido **depois de ver os dados** e está no ADR-032. Nenhuma execução contra o site.
+
+**Commit.** Working tree sobre `5363080`, branch `analysis/resultados`.
+
+**O que mudou na saída** (`experiments/analysis/`, regenerada pelo script):
+- M5-T4 e M2-T4 classificados como "não acionado". Resultados principais pelo denominador da matriz, com a fração sem as não acionadas ao lado: falso positivo 1/24 (1/23) e recuperação 3/6 (3/5). A conclusão não muda.
+- Achado do M5-T10, calculado a partir dos fingerprints de baseline: `text` vazio, corroboração inaplicável e sem desconto (ADR-014), e substituição pelo vizinho na posição do fingerprint de disponibilidade, com score 0,925. Nova tabela `22-achado-falso-positivo`. O mecanismo não muda, e o tratamento conservador da corroboração indisponível fica como trabalho futuro.
+- As três escolhas de cálculo (diferença de medianas no custo passivo, grade de 0,05 e rótulo "não acionado") passam a citar o ADR-032.
+- A métrica de localização correta continua sem cálculo, porque não foi registrada antes dos dados.
+
+**Comandos e resultados.** `npx tsc -p .` sem erros; 154/154 unitários; duas gerações com `diff -r` sem diferenças; `--check` com 49 arquivos idênticos ao gerado.
+
+**Anomalias.** Nenhuma.
