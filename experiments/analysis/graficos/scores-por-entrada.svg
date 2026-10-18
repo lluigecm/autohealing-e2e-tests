@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 644" width="660" height="644" role="img" aria-label="Scores por entrada">
+<title>Scores por entrada</title>
+<style>
+  svg { --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --grid: #dedcd6; --s1: #2a78d6; --s2: #eb6834; }
+  @media (prefers-color-scheme: dark) { svg { --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --grid: #3a3936; --s1: #3987e5; --s2: #d95926; } }
+  .bg { fill: var(--surface); } .t { fill: var(--ink); font: 13px sans-serif; } .t2 { fill: var(--ink-2); font: 11px sans-serif; }
+  .g { stroke: var(--grid); stroke-width: 1; } .ax { stroke: var(--ink-2); stroke-width: 1; }
+  .s1 { stroke: var(--s1); fill: var(--s1); } .s2 { stroke: var(--s2); fill: var(--s2); } .ln { fill: none; stroke-width: 2; }
+  .ref { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; } .bar { fill: var(--s1); }
+</style>
+<rect class="bg" width="660" height="644"/>
+<text class="t" x="16" y="24">Scores registrados por entrada (condição ligada)</text>
+<circle class="s1" cx="250" cy="42" r="5"/><text class="t2" x="260" y="46">recuperação (cosmética)</text>
+<circle class="s2" cx="420" cy="42" r="5"/><text class="t2" x="430" y="46">falso positivo (M5)</text>
+<line class="g" x1="250.0" x2="250.0" y1="60.0" y2="600.0"/>
+<text class="t2" x="250.0" y="616.0" text-anchor="middle">0,00</text>
+<line class="g" x1="345.0" x2="345.0" y1="60.0" y2="600.0"/>
+<text class="t2" x="345.0" y="616.0" text-anchor="middle">0,25</text>
+<line class="g" x1="440.0" x2="440.0" y1="60.0" y2="600.0"/>
+<text class="t2" x="440.0" y="616.0" text-anchor="middle">0,50</text>
+<line class="g" x1="535.0" x2="535.0" y1="60.0" y2="600.0"/>
+<text class="t2" x="535.0" y="616.0" text-anchor="middle">0,75</text>
+<line class="g" x1="630.0" x2="630.0" y1="60.0" y2="600.0"/>
+<text class="t2" x="630.0" y="616.0" text-anchor="middle">1,00</text>
+<line class="ref" x1="516.0" x2="516.0" y1="56.0" y2="600.0"/>
+<text class="t2" x="520.0" y="630.0">limiar 0,7</text>
+<text class="t2" x="242.0" y="73.0" text-anchor="end">M1-T8</text>
+<circle class="s1" cx="630.0" cy="69.0" r="4"><title>M1-T8: 1,000</title></circle>
+<text class="t2" x="242.0" y="91.0" text-anchor="end">M1-T9</text>
+<circle class="s1" cx="630.0" cy="87.0" r="4"><title>M1-T9: 1,000</title></circle>
+<text class="t2" x="242.0" y="109.0" text-anchor="end">M1-T10</text>
+<circle class="s1" cx="630.0" cy="105.0" r="4"><title>M1-T10: 1,000</title></circle>
+<text class="t2" x="242.0" y="127.0" text-anchor="end">M2-T1-travel_2-relabel</text>
+<circle class="s1" cx="440.0" cy="123.0" r="4"><title>M2-T1-travel_2-relabel: 0,500</title></circle>
+<text class="t2" x="242.0" y="145.0" text-anchor="end">M2-T1-sequential-art_5-append-token</text>
+<circle class="s1" cx="519.2" cy="141.0" r="4"><title>M2-T1-sequential-art_5-append-token: 0,708</title></circle>
+<text class="t2" x="242.0" y="163.0" text-anchor="end">M2-T4-relabel</text>
+<text class="t2" x="254.0" y="163.0">sem entrada de log (não acionado)</text>
+<text class="t2" x="242.0" y="181.0" text-anchor="end">M5-T1-crime_51</text>
+<circle class="s2" cx="323.6" cy="177.0" r="4"><title>M5-T1-crime_51: 0,194</title></circle>
+<text class="t2" x="242.0" y="199.0" text-anchor="end">M5-T1-historical_42</text>
+<circle class="s2" cx="323.6" cy="195.0" r="4"><title>M5-T1-historical_42: 0,194</title></circle>
+<text class="t2" x="242.0" y="217.0" text-anchor="end">M5-T1-contemporary_38</text>
+<circle class="s2" cx="323.6" cy="213.0" r="4"><title>M5-T1-contemporary_38: 0,194</title></circle>
+<text class="t2" x="242.0" y="235.0" text-anchor="end">M5-T1-health_47</text>
+<circle class="s2" cx="323.6" cy="231.0" r="4"><title>M5-T1-health_47: 0,194</title></circle>
+<text class="t2" x="242.0" y="253.0" text-anchor="end">M5-T1-biography_36</text>
+<circle class="s2" cx="323.6" cy="249.0" r="4"><title>M5-T1-biography_36: 0,194</title></circle>
+<text class="t2" x="242.0" y="271.0" text-anchor="end">M5-T1-christian-fiction_34</text>
+<circle class="s2" cx="323.6" cy="267.0" r="4"><title>M5-T1-christian-fiction_34: 0,194</title></circle>
+<text class="t2" x="242.0" y="289.0" text-anchor="end">M5-T1-psychology_26</text>
+<circle class="s2" cx="323.6" cy="285.0" r="4"><title>M5-T1-psychology_26: 0,194</title></circle>
+<text class="t2" x="242.0" y="307.0" text-anchor="end">M5-T1-art_25</text>
+<circle class="s2" cx="323.6" cy="303.0" r="4"><title>M5-T1-art_25: 0,194</title></circle>
+<text class="t2" x="242.0" y="325.0" text-anchor="end">M5-T1-autobiography_27</text>
+<circle class="s2" cx="323.6" cy="321.0" r="4"><title>M5-T1-autobiography_27: 0,194</title></circle>
+<text class="t2" x="242.0" y="343.0" text-anchor="end">M5-T1-humor_30</text>
+<circle class="s2" cx="323.6" cy="339.0" r="4"><title>M5-T1-humor_30: 0,194</title></circle>
+<text class="t2" x="242.0" y="361.0" text-anchor="end">M5-T1-travel_2</text>
+<circle class="s2" cx="330.8" cy="357.0" r="4"><title>M5-T1-travel_2: 0,212</title></circle>
+<text class="t2" x="242.0" y="379.0" text-anchor="end">M5-T1-music_14</text>
+<circle class="s2" cx="406.8" cy="375.0" r="4"><title>M5-T1-music_14: 0,412</title></circle>
+<text class="t2" x="242.0" y="397.0" text-anchor="end">M5-T1-history_32</text>
+<circle class="s2" cx="323.6" cy="393.0" r="4"><title>M5-T1-history_32: 0,194</title></circle>
+<text class="t2" x="242.0" y="415.0" text-anchor="end">M5-T1-mystery_3</text>
+<circle class="s2" cx="440.0" cy="411.0" r="4"><title>M5-T1-mystery_3: 0,500</title></circle>
+<text class="t2" x="242.0" y="433.0" text-anchor="end">M5-T1-sequential-art_5</text>
+<circle class="s2" cx="406.8" cy="429.0" r="4"><title>M5-T1-sequential-art_5: 0,412</title></circle>
+<text class="t2" x="242.0" y="451.0" text-anchor="end">M5-T1-default_15</text>
+<circle class="s2" cx="406.8" cy="447.0" r="4"><title>M5-T1-default_15: 0,412</title></circle>
+<text class="t2" x="242.0" y="469.0" text-anchor="end">M5-T3</text>
+<circle class="s2" cx="345.0" cy="465.0" r="4"><title>M5-T3: 0,250</title></circle>
+<circle class="s2" cx="354.5" cy="465.0" r="4"><title>M5-T3: 0,275</title></circle>
+<circle class="s2" cx="440.0" cy="465.0" r="4"><title>M5-T3: 0,500</title></circle>
+<text class="t2" x="242.0" y="487.0" text-anchor="end">M5-T4</text>
+<text class="t2" x="254.0" y="487.0">sem entrada de log (não acionado)</text>
+<text class="t2" x="242.0" y="505.0" text-anchor="end">M5-T5</text>
+<circle class="s2" cx="328.4" cy="501.0" r="4"><title>M5-T5: 0,206</title></circle>
+<text class="t2" x="242.0" y="523.0" text-anchor="end">M5-T6</text>
+<circle class="s2" cx="397.3" cy="519.0" r="4"><title>M5-T6: 0,388</title></circle>
+<circle class="s2" cx="406.8" cy="519.0" r="4"><title>M5-T6: 0,412</title></circle>
+<circle class="s2" cx="411.5" cy="519.0" r="4"><title>M5-T6: 0,425</title></circle>
+<circle class="s2" cx="421.0" cy="519.0" r="4"><title>M5-T6: 0,450</title></circle>
+<circle class="s2" cx="440.0" cy="519.0" r="4"><title>M5-T6: 0,500</title></circle>
+<text class="t2" x="242.0" y="541.0" text-anchor="end">M5-T7</text>
+<circle class="s2" cx="421.0" cy="537.0" r="4"><title>M5-T7: 0,450</title></circle>
+<text class="t2" x="242.0" y="559.0" text-anchor="end">M5-T8</text>
+<circle class="s2" cx="440.0" cy="555.0" r="4"><title>M5-T8: 0,500</title></circle>
+<text class="t2" x="242.0" y="577.0" text-anchor="end">M5-T9</text>
+<circle class="s2" cx="440.0" cy="573.0" r="4"><title>M5-T9: 0,500</title></circle>
+<text class="t2" x="242.0" y="595.0" text-anchor="end">M5-T10</text>
+<circle class="s2" cx="601.5" cy="591.0" r="4"><title>M5-T10: 0,925</title></circle>
+</svg>

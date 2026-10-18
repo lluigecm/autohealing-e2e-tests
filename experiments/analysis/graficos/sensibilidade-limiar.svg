@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 344" width="680" height="344" role="img" aria-label="Sensibilidade do limiar">
+<title>Sensibilidade do limiar</title>
+<style>
+  svg { --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --grid: #dedcd6; --s1: #2a78d6; --s2: #eb6834; }
+  @media (prefers-color-scheme: dark) { svg { --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --grid: #3a3936; --s1: #3987e5; --s2: #d95926; } }
+  .bg { fill: var(--surface); } .t { fill: var(--ink); font: 13px sans-serif; } .t2 { fill: var(--ink-2); font: 11px sans-serif; }
+  .g { stroke: var(--grid); stroke-width: 1; } .ax { stroke: var(--ink-2); stroke-width: 1; }
+  .s1 { stroke: var(--s1); fill: var(--s1); } .s2 { stroke: var(--s2); fill: var(--s2); } .ln { fill: none; stroke-width: 2; }
+  .ref { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; } .bar { fill: var(--s1); }
+</style>
+<rect class="bg" width="680" height="344"/>
+<text class="t" x="16" y="24">Sensibilidade do limiar (secundária e aproximada)</text>
+<text class="t2" x="56" y="52">Entradas recuperadas (de 6)</text>
+<line class="g" x1="56.0" x2="316.0" y1="244.0" y2="244.0"/>
+<text class="t2" x="50.0" y="248.0" text-anchor="end">0</text>
+<line class="g" x1="56.0" x2="316.0" y1="214.0" y2="214.0"/>
+<text class="t2" x="50.0" y="218.0" text-anchor="end">1</text>
+<line class="g" x1="56.0" x2="316.0" y1="184.0" y2="184.0"/>
+<text class="t2" x="50.0" y="188.0" text-anchor="end">2</text>
+<line class="g" x1="56.0" x2="316.0" y1="154.0" y2="154.0"/>
+<text class="t2" x="50.0" y="158.0" text-anchor="end">3</text>
+<line class="g" x1="56.0" x2="316.0" y1="124.0" y2="124.0"/>
+<text class="t2" x="50.0" y="128.0" text-anchor="end">4</text>
+<line class="g" x1="56.0" x2="316.0" y1="94.0" y2="94.0"/>
+<text class="t2" x="50.0" y="98.0" text-anchor="end">5</text>
+<line class="g" x1="56.0" x2="316.0" y1="64.0" y2="64.0"/>
+<text class="t2" x="50.0" y="68.0" text-anchor="end">6</text>
+<line class="ax" x1="56.0" x2="316.0" y1="244.0" y2="244.0"/>
+<text class="t2" x="56.0" y="260.0" text-anchor="middle">0,00</text>
+<text class="t2" x="121.0" y="260.0" text-anchor="middle">0,25</text>
+<text class="t2" x="186.0" y="260.0" text-anchor="middle">0,50</text>
+<text class="t2" x="251.0" y="260.0" text-anchor="middle">0,75</text>
+<text class="t2" x="316.0" y="260.0" text-anchor="middle">1,00</text>
+<line class="ref" x1="238.0" x2="238.0" y1="64.0" y2="244.0"/>
+<text class="t2" x="242.0" y="74.0">0,7</text>
+<polyline class="s1 ln" points="56.0,154.0 69.0,154.0 82.0,154.0 95.0,154.0 108.0,154.0 121.0,154.0 134.0,154.0 147.0,154.0 160.0,154.0 173.0,154.0 186.0,154.0 199.0,154.0 212.0,154.0 225.0,154.0 238.0,154.0 251.0,184.0 264.0,184.0 277.0,184.0 290.0,184.0 303.0,184.0 316.0,184.0"/>
+<circle class="s1" cx="56.0" cy="154.0" r="3"><title>limiar 0,00: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="69.0" cy="154.0" r="3"><title>limiar 0,05: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="82.0" cy="154.0" r="3"><title>limiar 0,10: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="95.0" cy="154.0" r="3"><title>limiar 0,15: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="108.0" cy="154.0" r="3"><title>limiar 0,20: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="121.0" cy="154.0" r="3"><title>limiar 0,25: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="134.0" cy="154.0" r="3"><title>limiar 0,30: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="147.0" cy="154.0" r="3"><title>limiar 0,35: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="160.0" cy="154.0" r="3"><title>limiar 0,40: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="173.0" cy="154.0" r="3"><title>limiar 0,45: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="186.0" cy="154.0" r="3"><title>limiar 0,50: 3 (+1 indeterminadas)</title></circle>
+<circle class="s1" cx="199.0" cy="154.0" r="3"><title>limiar 0,55: 3</title></circle>
+<circle class="s1" cx="212.0" cy="154.0" r="3"><title>limiar 0,60: 3</title></circle>
+<circle class="s1" cx="225.0" cy="154.0" r="3"><title>limiar 0,65: 3</title></circle>
+<circle class="s1" cx="238.0" cy="154.0" r="3"><title>limiar 0,70: 3</title></circle>
+<circle class="s1" cx="251.0" cy="184.0" r="3"><title>limiar 0,75: 2</title></circle>
+<circle class="s1" cx="264.0" cy="184.0" r="3"><title>limiar 0,80: 2</title></circle>
+<circle class="s1" cx="277.0" cy="184.0" r="3"><title>limiar 0,85: 2</title></circle>
+<circle class="s1" cx="290.0" cy="184.0" r="3"><title>limiar 0,90: 2</title></circle>
+<circle class="s1" cx="303.0" cy="184.0" r="3"><title>limiar 0,95: 2</title></circle>
+<circle class="s1" cx="316.0" cy="184.0" r="3"><title>limiar 1,00: 2</title></circle>
+<text class="t2" x="186.0" y="278.0" text-anchor="middle">limiar</text>
+<text class="t2" x="396" y="52">Falsos positivos brutos (de 24)</text>
+<line class="g" x1="396.0" x2="656.0" y1="244.0" y2="244.0"/>
+<text class="t2" x="390.0" y="248.0" text-anchor="end">0</text>
+<line class="g" x1="396.0" x2="656.0" y1="199.0" y2="199.0"/>
+<text class="t2" x="390.0" y="203.0" text-anchor="end">6</text>
+<line class="g" x1="396.0" x2="656.0" y1="154.0" y2="154.0"/>
+<text class="t2" x="390.0" y="158.0" text-anchor="end">12</text>
+<line class="g" x1="396.0" x2="656.0" y1="109.0" y2="109.0"/>
+<text class="t2" x="390.0" y="113.0" text-anchor="end">18</text>
+<line class="g" x1="396.0" x2="656.0" y1="64.0" y2="64.0"/>
+<text class="t2" x="390.0" y="68.0" text-anchor="end">24</text>
+<line class="ax" x1="396.0" x2="656.0" y1="244.0" y2="244.0"/>
+<text class="t2" x="396.0" y="260.0" text-anchor="middle">0,00</text>
+<text class="t2" x="461.0" y="260.0" text-anchor="middle">0,25</text>
+<text class="t2" x="526.0" y="260.0" text-anchor="middle">0,50</text>
+<text class="t2" x="591.0" y="260.0" text-anchor="middle">0,75</text>
+<text class="t2" x="656.0" y="260.0" text-anchor="middle">1,00</text>
+<line class="ref" x1="578.0" x2="578.0" y1="64.0" y2="244.0"/>
+<text class="t2" x="582.0" y="74.0">0,7</text>
+<polyline class="s2 ln" points="396.0,71.5 409.0,71.5 422.0,71.5 435.0,71.5 448.0,154.0 461.0,169.0 474.0,169.0 487.0,169.0 500.0,169.0 513.0,191.5 526.0,199.0 539.0,236.5 552.0,236.5 565.0,236.5 578.0,236.5 591.0,236.5 604.0,236.5 617.0,236.5 630.0,236.5 643.0,244.0 656.0,244.0"/>
+<circle class="s2" cx="396.0" cy="71.5" r="3"><title>limiar 0,00: 23</title></circle>
+<circle class="s2" cx="409.0" cy="71.5" r="3"><title>limiar 0,05: 23</title></circle>
+<circle class="s2" cx="422.0" cy="71.5" r="3"><title>limiar 0,10: 23</title></circle>
+<circle class="s2" cx="435.0" cy="71.5" r="3"><title>limiar 0,15: 23</title></circle>
+<circle class="s2" cx="448.0" cy="154.0" r="3"><title>limiar 0,20: 12</title></circle>
+<circle class="s2" cx="461.0" cy="169.0" r="3"><title>limiar 0,25: 10</title></circle>
+<circle class="s2" cx="474.0" cy="169.0" r="3"><title>limiar 0,30: 10</title></circle>
+<circle class="s2" cx="487.0" cy="169.0" r="3"><title>limiar 0,35: 10</title></circle>
+<circle class="s2" cx="500.0" cy="169.0" r="3"><title>limiar 0,40: 10</title></circle>
+<circle class="s2" cx="513.0" cy="191.5" r="3"><title>limiar 0,45: 7</title></circle>
+<circle class="s2" cx="526.0" cy="199.0" r="3"><title>limiar 0,50: 6</title></circle>
+<circle class="s2" cx="539.0" cy="236.5" r="3"><title>limiar 0,55: 1</title></circle>
+<circle class="s2" cx="552.0" cy="236.5" r="3"><title>limiar 0,60: 1</title></circle>
+<circle class="s2" cx="565.0" cy="236.5" r="3"><title>limiar 0,65: 1</title></circle>
+<circle class="s2" cx="578.0" cy="236.5" r="3"><title>limiar 0,70: 1</title></circle>
+<circle class="s2" cx="591.0" cy="236.5" r="3"><title>limiar 0,75: 1</title></circle>
+<circle class="s2" cx="604.0" cy="236.5" r="3"><title>limiar 0,80: 1</title></circle>
+<circle class="s2" cx="617.0" cy="236.5" r="3"><title>limiar 0,85: 1</title></circle>
+<circle class="s2" cx="630.0" cy="236.5" r="3"><title>limiar 0,90: 1</title></circle>
+<circle class="s2" cx="643.0" cy="244.0" r="3"><title>limiar 0,95: 0</title></circle>
+<circle class="s2" cx="656.0" cy="244.0" r="3"><title>limiar 1,00: 0</title></circle>
+<text class="t2" x="526.0" y="278.0" text-anchor="middle">limiar</text>
+<text class="t2" x="16" y="330.0">Indeterminadas não contam como recuperadas. Grade de 0,05.</text>
+</svg>

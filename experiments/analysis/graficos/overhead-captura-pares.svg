@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 310" width="660" height="310" role="img" aria-label="Tempo total da suíte por par">
+<title>Tempo total da suíte por par</title>
+<style>
+  svg { --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --grid: #dedcd6; --s1: #2a78d6; --s2: #eb6834; }
+  @media (prefers-color-scheme: dark) { svg { --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --grid: #3a3936; --s1: #3987e5; --s2: #d95926; } }
+  .bg { fill: var(--surface); } .t { fill: var(--ink); font: 13px sans-serif; } .t2 { fill: var(--ink-2); font: 11px sans-serif; }
+  .g { stroke: var(--grid); stroke-width: 1; } .ax { stroke: var(--ink-2); stroke-width: 1; }
+  .s1 { stroke: var(--s1); fill: var(--s1); } .s2 { stroke: var(--s2); fill: var(--s2); } .ln { fill: none; stroke-width: 2; }
+  .ref { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; } .bar { fill: var(--s1); }
+</style>
+<rect class="bg" width="660" height="310"/>
+<text class="t" x="16" y="24">Medição da captura: tempo total da suíte por par (s)</text>
+<circle class="s1" cx="56" cy="42" r="5"/><text class="t2" x="66" y="46">captura ligada</text>
+<circle class="s2" cx="176" cy="42" r="5"/><text class="t2" x="186" y="46">captura desligada</text>
+<line class="g" x1="56.0" x2="616.0" y1="260.0" y2="260.0"/>
+<text class="t2" x="50.0" y="264.0" text-anchor="end">50</text>
+<line class="g" x1="56.0" x2="616.0" y1="160.0" y2="160.0"/>
+<text class="t2" x="50.0" y="164.0" text-anchor="end">80</text>
+<line class="g" x1="56.0" x2="616.0" y1="60.0" y2="60.0"/>
+<text class="t2" x="50.0" y="64.0" text-anchor="end">110</text>
+<line class="ax" x1="56.0" x2="616.0" y1="260.0" y2="260.0"/>
+<text class="t2" x="84.0" y="276.0" text-anchor="middle">1</text>
+<text class="t2" x="140.0" y="276.0" text-anchor="middle">2</text>
+<text class="t2" x="196.0" y="276.0" text-anchor="middle">3</text>
+<text class="t2" x="252.0" y="276.0" text-anchor="middle">4</text>
+<text class="t2" x="308.0" y="276.0" text-anchor="middle">5</text>
+<text class="t2" x="364.0" y="276.0" text-anchor="middle">6</text>
+<text class="t2" x="420.0" y="276.0" text-anchor="middle">7</text>
+<text class="t2" x="476.0" y="276.0" text-anchor="middle">8</text>
+<text class="t2" x="532.0" y="276.0" text-anchor="middle">9</text>
+<text class="t2" x="588.0" y="276.0" text-anchor="middle">10</text>
+<line class="g" x1="84.0" x2="84.0" y1="243.1" y2="232.2"/>
+<circle class="s1" cx="84.0" cy="243.1" r="4"><title>par-01 ligada: 55,1 s</title></circle>
+<circle class="s2" cx="84.0" cy="232.2" r="4"><title>par-01 desligada: 58,3 s</title></circle>
+<line class="g" x1="140.0" x2="140.0" y1="247.8" y2="251.1"/>
+<circle class="s1" cx="140.0" cy="247.8" r="4"><title>par-02 ligada: 53,7 s</title></circle>
+<circle class="s2" cx="140.0" cy="251.1" r="4"><title>par-02 desligada: 52,7 s</title></circle>
+<line class="g" x1="196.0" x2="196.0" y1="216.6" y2="232.6"/>
+<circle class="s1" cx="196.0" cy="216.6" r="4"><title>par-03 ligada: 63,0 s</title></circle>
+<circle class="s2" cx="196.0" cy="232.6" r="4"><title>par-03 desligada: 58,2 s</title></circle>
+<line class="g" x1="252.0" x2="252.0" y1="238.9" y2="241.4"/>
+<circle class="s1" cx="252.0" cy="238.9" r="4"><title>par-04 ligada: 56,3 s</title></circle>
+<circle class="s2" cx="252.0" cy="241.4" r="4"><title>par-04 desligada: 55,6 s</title></circle>
+<line class="g" x1="308.0" x2="308.0" y1="201.1" y2="226.8"/>
+<circle class="s1" cx="308.0" cy="201.1" r="4"><title>par-05 ligada: 67,7 s</title></circle>
+<circle class="s2" cx="308.0" cy="226.8" r="4"><title>par-05 desligada: 60,0 s</title></circle>
+<line class="g" x1="364.0" x2="364.0" y1="185.3" y2="201.4"/>
+<circle class="s1" cx="364.0" cy="185.3" r="4"><title>par-06 ligada: 72,4 s</title></circle>
+<circle class="s2" cx="364.0" cy="201.4" r="4"><title>par-06 desligada: 67,6 s</title></circle>
+<line class="g" x1="420.0" x2="420.0" y1="203.4" y2="200.7"/>
+<circle class="s1" cx="420.0" cy="203.4" r="4"><title>par-07 ligada: 67,0 s</title></circle>
+<circle class="s2" cx="420.0" cy="200.7" r="4"><title>par-07 desligada: 67,8 s</title></circle>
+<line class="g" x1="476.0" x2="476.0" y1="92.7" y2="159.9"/>
+<circle class="s1" cx="476.0" cy="92.7" r="4"><title>par-08 ligada: 100,2 s</title></circle>
+<circle class="s2" cx="476.0" cy="159.9" r="4"><title>par-08 desligada: 80,0 s</title></circle>
+<line class="g" x1="532.0" x2="532.0" y1="174.7" y2="205.8"/>
+<circle class="s1" cx="532.0" cy="174.7" r="4"><title>par-09 ligada: 75,6 s</title></circle>
+<circle class="s2" cx="532.0" cy="205.8" r="4"><title>par-09 desligada: 66,3 s</title></circle>
+<line class="g" x1="588.0" x2="588.0" y1="225.6" y2="191.6"/>
+<circle class="s1" cx="588.0" cy="225.6" r="4"><title>par-10 ligada: 60,3 s</title></circle>
+<circle class="s2" cx="588.0" cy="191.6" r="4"><title>par-10 desligada: 70,5 s</title></circle>
+<text class="t2" x="336.0" y="294.0" text-anchor="middle">par</text>
+</svg>

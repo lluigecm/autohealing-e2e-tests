@@ -1,2 +1,4 @@
 # Resultados oficiais das rodadas: bytes exatos, sem conversão de fim de linha.
 experiments/results/** -text
+# Saída da análise: bytes exatos, para que a conferência de determinismo compare o que foi gerado.
+experiments/analysis/** -text

@@ -1,0 +1,6 @@
+métrica,n,mediana (ms),Q1 (ms),Q3 (ms),razão (%),regra de relato
+"1. extração, por chamada",2310,28.540,5.500,32.112,,
+"1. gravação, por chamada",2310,3.835,3.688,4.062,,
+"1. extração + gravação, por execução de teste",660,85.629,78.996,96.693,,
+2. duração por teste: diferença pareada das medianas (ligada − desligada),66,29.250,-4.750,76.125,1.85,diferença de ponta a ponta não distinguível do ruído da rede
+3. tempo total da execução da suíte: diferença por par (ligada − desligada),10,2894.000,-422.250,6983.250,4.59,diferença de ponta a ponta não distinguível do ruído da rede
