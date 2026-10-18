@@ -454,3 +454,38 @@ Os 26 unitários novos cobrem:
 - `sha256sum -c MANIFEST.sha256`, rodado dentro do diretório, confere os 1.599 arquivos.
 - São 1.600 arquivos e 6,0 MB no total.
 - **Caminhos longos.** As cópias dos fingerprints de cada tentativa chegam a 315 caracteres de caminho absoluto, acima do limite de 260 do Windows: o `git add` recusou 242 arquivos. Com `git config core.longpaths true`, ativado só neste repositório e com o aval do usuário, os 1.600 arquivos entraram. O hash de cada blob no índice confere com os bytes crus do arquivo correspondente. Quem clonar o repositório no Windows precisa da mesma configuração para fazer o checkout desse diretório.
+
+---
+
+## 2026-10-15 — Análise dos resultados
+
+**Objetivo.** Gerar por script, a partir de `experiments/results/`, todas as tabelas, números e gráficos da rodada principal e da medição complementar da captura, com as regras já registradas (ADR-016, ADR-020, ADR-024 a ADR-027 e ADR-031). Nenhuma execução contra o site.
+
+**Ambiente.** Node v24.14.0, Playwright 1.63.0, Windows 11 Home 10.0.26200. Sem rede (os gráficos foram conferidos renderizando os SVG locais).
+
+**Commit.** Working tree sobre `21e2ec4`, branch `analysis/resultados`, com o código ainda não commitado.
+
+**Comandos e resultados.**
+
+| Comando | Resultado |
+|---|---|
+| `node experiments/resultsAnalysis.mts` | 47 arquivos em `experiments/analysis/` |
+| A mesma geração, duas vezes, com `diff -r` entre elas | Nenhuma diferença |
+| `node experiments/resultsAnalysis.mts --check` | 47 arquivos idênticos ao gerado |
+| `npx tsc -p .` | Sem erros |
+| `npx playwright test --config=playwright.unit.config.ts` | 153/153. Eram 143; entraram 10, das regras de classificação e agregação |
+
+**Integridade, antes de qualquer dado.** O script confere os manifestos SHA-256 e para se algum arquivo divergir. Resultado: 2.506/2.506 arquivos na rodada principal e 1.599/1.599 na medição da captura, nenhum fora do manifesto. Também confere a coerência entre o log do mecanismo e os eventos dos testes: execuções previstas, nenhuma inválida na tentativa usada, nenhuma entrada de log órfã e nenhuma decisão incoerente com o score e o limiar. Nenhum problema.
+
+**Resultado resumido.** O resumo completo, com o ADR de cada regra ao lado de cada número, está em `experiments/analysis/RESUMO.md`.
+- Recuperação: 3/6 entradas (M1-T8, M1-T9 e M2-T1-sequential-art_5-append-token). M1-T10 cai em "elemento certo, teste falha" em 48/48 execuções.
+- Falso positivo: 1/24 bruto (M5-T10, `replace` em 48/48 execuções, score 0,925) e 1/9 por alvo; T1 em 0 de 16 categorias.
+- Não determinismo: nenhuma divergência em 914 trios. Exclusões por `applied: false`: 0 de 4.040 execuções.
+
+**Divergências e lacunas** (relatadas, sem nenhuma correção):
+1. **M5-T10 é falso positivo.** O ADR-020 previa `fail` para M5 × T4–T10. Com a nota removida, a heurística estrutural escolheu outro elemento na mesma posição, com score 0,925 e a flag `text-corroboration-unavailable`.
+2. **M2-T4 e M5-T4 não acionaram o mecanismo.** A tabela do ADR-020 previa `fail` com score de no máximo 0,50. A observação de previsão do mesmo ADR e a detecção por exceção do ADR-027 já diziam que `hasNextPage()` não lança exceção.
+3. **M5-T2 fora do previsto nos quatro testes de Crime.** O mecanismo foi acionado com `fail` nos três `product-details` de Crime, e o `category-navigation` de Crime falhou nas duas condições, como previa a observação do ADR-020.
+4. **Lacuna da regra de agregação.** O M5-T4 não tem `replace` nem `fail` em todas as execuções. O ADR-025 não define o desfecho desse caso, e a análise o lista à parte, fora do numerador do falso positivo.
+
+**Anomalias.** Nenhuma na análise.

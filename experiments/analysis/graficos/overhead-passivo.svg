@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 290" width="660" height="290" role="img" aria-label="Custo passivo por par">
+<title>Custo passivo por par</title>
+<style>
+  svg { --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --grid: #dedcd6; --s1: #2a78d6; --s2: #eb6834; }
+  @media (prefers-color-scheme: dark) { svg { --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --grid: #3a3936; --s1: #3987e5; --s2: #d95926; } }
+  .bg { fill: var(--surface); } .t { fill: var(--ink); font: 13px sans-serif; } .t2 { fill: var(--ink-2); font: 11px sans-serif; }
+  .g { stroke: var(--grid); stroke-width: 1; } .ax { stroke: var(--ink-2); stroke-width: 1; }
+  .s1 { stroke: var(--s1); fill: var(--s1); } .s2 { stroke: var(--s2); fill: var(--s2); } .ln { fill: none; stroke-width: 2; }
+  .ref { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; } .bar { fill: var(--s1); }
+</style>
+<rect class="bg" width="660" height="290"/>
+<text class="t" x="16" y="24">Custo passivo: diferença de duração por par (ligada − desligada)</text>
+<text class="t2" x="16" y="42">825 pares (entrada, teste); classes de 100 ms</text>
+<line class="g" x1="56.0" x2="616.0" y1="256.0" y2="256.0"/>
+<text class="t2" x="50.0" y="260.0" text-anchor="end">0</text>
+<line class="g" x1="56.0" x2="616.0" y1="156.0" y2="156.0"/>
+<text class="t2" x="50.0" y="160.0" text-anchor="end">125</text>
+<line class="g" x1="56.0" x2="616.0" y1="56.0" y2="56.0"/>
+<text class="t2" x="50.0" y="60.0" text-anchor="end">250</text>
+<line class="ax" x1="56.0" x2="616.0" y1="256.0" y2="256.0"/>
+<text class="t2" x="56.0" y="272.0" text-anchor="middle">-3500 ms</text>
+<text class="t2" x="126.0" y="272.0" text-anchor="middle">-2500 ms</text>
+<text class="t2" x="196.0" y="272.0" text-anchor="middle">-1500 ms</text>
+<text class="t2" x="266.0" y="272.0" text-anchor="middle">-500 ms</text>
+<text class="t2" x="336.0" y="272.0" text-anchor="middle">500 ms</text>
+<text class="t2" x="406.0" y="272.0" text-anchor="middle">1500 ms</text>
+<text class="t2" x="476.0" y="272.0" text-anchor="middle">2500 ms</text>
+<text class="t2" x="546.0" y="272.0" text-anchor="middle">3500 ms</text>
+<text class="t2" x="616.0" y="272.0" text-anchor="middle">4500 ms</text>
+<rect class="bar" x="57.0" y="255.2" width="5.0" height="0.8" rx="2"><title>-3500 a -3400 ms: 1 pares</title></rect>
+<rect class="bar" x="78.0" y="255.2" width="5.0" height="0.8" rx="2"><title>-3200 a -3100 ms: 1 pares</title></rect>
+<rect class="bar" x="99.0" y="254.4" width="5.0" height="1.6" rx="2"><title>-2900 a -2800 ms: 2 pares</title></rect>
+<rect class="bar" x="148.0" y="255.2" width="5.0" height="0.8" rx="2"><title>-2200 a -2100 ms: 1 pares</title></rect>
+<rect class="bar" x="204.0" y="255.2" width="5.0" height="0.8" rx="2"><title>-1400 a -1300 ms: 1 pares</title></rect>
+<rect class="bar" x="232.0" y="255.2" width="5.0" height="0.8" rx="2"><title>-1000 a -900 ms: 1 pares</title></rect>
+<rect class="bar" x="246.0" y="255.2" width="5.0" height="0.8" rx="2"><title>-800 a -700 ms: 1 pares</title></rect>
+<rect class="bar" x="253.0" y="255.2" width="5.0" height="0.8" rx="2"><title>-700 a -600 ms: 1 pares</title></rect>
+<rect class="bar" x="260.0" y="253.6" width="5.0" height="2.4" rx="2"><title>-600 a -500 ms: 3 pares</title></rect>
+<rect class="bar" x="267.0" y="252.0" width="5.0" height="4.0" rx="2"><title>-500 a -400 ms: 5 pares</title></rect>
+<rect class="bar" x="274.0" y="239.2" width="5.0" height="16.8" rx="2"><title>-400 a -300 ms: 21 pares</title></rect>
+<rect class="bar" x="281.0" y="228.8" width="5.0" height="27.2" rx="2"><title>-300 a -200 ms: 34 pares</title></rect>
+<rect class="bar" x="288.0" y="171.2" width="5.0" height="84.8" rx="2"><title>-200 a -100 ms: 106 pares</title></rect>
+<rect class="bar" x="295.0" y="60.0" width="5.0" height="196.0" rx="2"><title>-100 a 0 ms: 245 pares</title></rect>
+<rect class="bar" x="302.0" y="92.0" width="5.0" height="164.0" rx="2"><title>0 a 100 ms: 205 pares</title></rect>
+<rect class="bar" x="309.0" y="174.4" width="5.0" height="81.6" rx="2"><title>100 a 200 ms: 102 pares</title></rect>
+<rect class="bar" x="316.0" y="220.0" width="5.0" height="36.0" rx="2"><title>200 a 300 ms: 45 pares</title></rect>
+<rect class="bar" x="323.0" y="236.0" width="5.0" height="20.0" rx="2"><title>300 a 400 ms: 25 pares</title></rect>
+<rect class="bar" x="330.0" y="248.8" width="5.0" height="7.2" rx="2"><title>400 a 500 ms: 9 pares</title></rect>
+<rect class="bar" x="337.0" y="253.6" width="5.0" height="2.4" rx="2"><title>500 a 600 ms: 3 pares</title></rect>
+<rect class="bar" x="344.0" y="254.4" width="5.0" height="1.6" rx="2"><title>600 a 700 ms: 2 pares</title></rect>
+<rect class="bar" x="365.0" y="254.4" width="5.0" height="1.6" rx="2"><title>900 a 1000 ms: 2 pares</title></rect>
+<rect class="bar" x="372.0" y="254.4" width="5.0" height="1.6" rx="2"><title>1000 a 1100 ms: 2 pares</title></rect>
+<rect class="bar" x="386.0" y="255.2" width="5.0" height="0.8" rx="2"><title>1200 a 1300 ms: 1 pares</title></rect>
+<rect class="bar" x="400.0" y="255.2" width="5.0" height="0.8" rx="2"><title>1400 a 1500 ms: 1 pares</title></rect>
+<rect class="bar" x="407.0" y="255.2" width="5.0" height="0.8" rx="2"><title>1500 a 1600 ms: 1 pares</title></rect>
+<rect class="bar" x="463.0" y="255.2" width="5.0" height="0.8" rx="2"><title>2300 a 2400 ms: 1 pares</title></rect>
+<rect class="bar" x="470.0" y="255.2" width="5.0" height="0.8" rx="2"><title>2400 a 2500 ms: 1 pares</title></rect>
+<rect class="bar" x="477.0" y="255.2" width="5.0" height="0.8" rx="2"><title>2500 a 2600 ms: 1 pares</title></rect>
+<rect class="bar" x="610.0" y="255.2" width="5.0" height="0.8" rx="2"><title>4400 a 4500 ms: 1 pares</title></rect>
+<line class="ref" x1="300.8" x2="300.8" y1="56.0" y2="256.0"/>
+<text class="t2" x="304.8" y="66.0">mediana -3,0 ms</text>
+</svg>

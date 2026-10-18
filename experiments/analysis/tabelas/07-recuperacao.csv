@@ -1,0 +1,7 @@
+entrada,alvo,mutação,score,decisão (entradas de log),elemento certo (entradas de log),teste passa (execuções),sucesso,"elemento certo, teste falha",cura incorreta,fail,não acionado,desfecho da entrada
+M1-T8,T8,M1,1.000,replace 96/96,sim 96/96,96/96,96/96,0/96,0/96,0/96,0/96,recuperada
+M1-T9,T9,M1,1.000,replace 96/96,sim 96/96,96/96,96/96,0/96,0/96,0/96,0/96,recuperada
+M1-T10,T10,M1,1.000,replace 96/96,sim 96/96,0/48,0/48,48/48,0/48,0/48,0/48,não recuperada
+M2-T1-travel_2-relabel,T1-travel_2,M2,0.500,fail 3/3,sim 3/3,0/3,0/3,0/3,0/3,3/3,0/3,não recuperada
+M2-T1-sequential-art_5-append-token,T1-sequential-art_5,M2,0.708,replace 3/3,sim 3/3,3/3,3/3,0/3,0/3,0/3,0/3,recuperada
+M2-T4-relabel,T4,M2,sem entrada de log,mecanismo não acionado,,0/3,0/3,0/3,0/3,0/3,3/3,não recuperada

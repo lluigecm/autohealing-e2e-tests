@@ -1,0 +1,111 @@
+# Condição desligada contra a matriz versionada, no teste reproduzido de cada entrada
+
+Regra: ADR-027. Gerado por `experiments/resultsAnalysis.mts`; não editar à mão.
+
+| entrada | teste reproduzido | matriz | passou (desligada) | concorda |
+| --- | --- | --- | --- | --- |
+| M1-T1-crime_51 | category-navigation › Crime | passa | 1/1 | sim |
+| M1-T1-historical_42 | category-navigation › Historical | passa | 1/1 | sim |
+| M1-T1-contemporary_38 | category-navigation › Contemporary | passa | 1/1 | sim |
+| M1-T1-health_47 | category-navigation › Health | passa | 1/1 | sim |
+| M1-T1-biography_36 | category-navigation › Biography | passa | 1/1 | sim |
+| M1-T1-christian-fiction_34 | category-navigation › Christian Fiction | passa | 1/1 | sim |
+| M1-T1-psychology_26 | category-navigation › Psychology | passa | 1/1 | sim |
+| M1-T1-art_25 | category-navigation › Art | passa | 1/1 | sim |
+| M1-T1-autobiography_27 | category-navigation › Autobiography | passa | 1/1 | sim |
+| M1-T1-humor_30 | category-navigation › Humor | passa | 1/1 | sim |
+| M1-T1-travel_2 | category-navigation › Travel | passa | 1/1 | sim |
+| M1-T1-music_14 | category-navigation › Music | passa | 1/1 | sim |
+| M1-T1-history_32 | category-navigation › History | passa | 1/1 | sim |
+| M1-T1-mystery_3 | category-navigation › Mystery | passa | 1/1 | sim |
+| M1-T1-sequential-art_5 | category-navigation › Sequential Art | passa | 1/1 | sim |
+| M1-T1-default_15 | category-navigation › Default | passa | 1/1 | sim |
+| M1-T2 | home | passa | 1/1 | sim |
+| M1-T3 | product-details #1 › Travel | passa | 1/1 | sim |
+| M1-T4 | pagination | passa | 1/1 | sim |
+| M1-T5 | category-navigation › Travel | passa | 1/1 | sim |
+| M1-T6 | home | passa | 1/1 | sim |
+| M1-T7 | product-details #1 › Travel | passa | 1/1 | sim |
+| M1-T8 | product-details #2 › Travel | falha | 0/3 | sim |
+| M1-T9 | product-details #2 › Travel | falha | 0/3 | sim |
+| M1-T10 | product-details #3 › Travel | falha | 0/3 | sim |
+| M2-T1-travel_2-relabel | category-navigation › Travel | falha | 0/3 | sim |
+| M2-T1-sequential-art_5-append-token | category-navigation › Sequential Art | falha | 0/3 | sim |
+| M2-T3-relabel | product-details #1 › Travel | passa | 1/1 | sim |
+| M2-T3-drop-last-token | product-details #1 › Travel | passa | 1/1 | sim |
+| M2-T4-relabel | pagination | falha | 0/3 | sim |
+| M3-T1-crime_51 | category-navigation › Crime | passa | 1/1 | sim |
+| M3-T1-historical_42 | category-navigation › Historical | passa | 1/1 | sim |
+| M3-T1-contemporary_38 | category-navigation › Contemporary | passa | 1/1 | sim |
+| M3-T1-health_47 | category-navigation › Health | passa | 1/1 | sim |
+| M3-T1-biography_36 | category-navigation › Biography | passa | 1/1 | sim |
+| M3-T1-christian-fiction_34 | category-navigation › Christian Fiction | passa | 1/1 | sim |
+| M3-T1-psychology_26 | category-navigation › Psychology | passa | 1/1 | sim |
+| M3-T1-art_25 | category-navigation › Art | passa | 1/1 | sim |
+| M3-T1-autobiography_27 | category-navigation › Autobiography | passa | 1/1 | sim |
+| M3-T1-humor_30 | category-navigation › Humor | passa | 1/1 | sim |
+| M3-T1-travel_2 | category-navigation › Travel | passa | 1/1 | sim |
+| M3-T1-music_14 | category-navigation › Music | passa | 1/1 | sim |
+| M3-T1-history_32 | category-navigation › History | passa | 1/1 | sim |
+| M3-T1-mystery_3 | category-navigation › Mystery | passa | 1/1 | sim |
+| M3-T1-sequential-art_5 | category-navigation › Sequential Art | passa | 1/1 | sim |
+| M3-T1-default_15 | category-navigation › Default | passa | 1/1 | sim |
+| M3-T2 | home | passa por engano | 3/3 | sim |
+| M3-T3 | product-details #1 › Travel | passa por engano | 3/3 | sim |
+| M3-T4 | pagination | passa | 1/1 | sim |
+| M3-T7 | product-details #1 › Travel | passa | 1/1 | sim |
+| M3-T8 | product-details #2 › Travel | passa | 1/1 | sim |
+| M3-T9 | product-details #2 › Travel | passa | 1/1 | sim |
+| M3-T10 | product-details #3 › Travel | passa | 1/1 | sim |
+| M4-T1-crime_51 | category-navigation › Crime | passa | 1/1 | sim |
+| M4-T1-historical_42 | category-navigation › Historical | passa | 1/1 | sim |
+| M4-T1-contemporary_38 | category-navigation › Contemporary | passa | 1/1 | sim |
+| M4-T1-health_47 | category-navigation › Health | passa | 1/1 | sim |
+| M4-T1-biography_36 | category-navigation › Biography | passa | 1/1 | sim |
+| M4-T1-christian-fiction_34 | category-navigation › Christian Fiction | passa | 1/1 | sim |
+| M4-T1-psychology_26 | category-navigation › Psychology | passa | 1/1 | sim |
+| M4-T1-art_25 | category-navigation › Art | passa | 1/1 | sim |
+| M4-T1-autobiography_27 | category-navigation › Autobiography | passa | 1/1 | sim |
+| M4-T1-humor_30 | category-navigation › Humor | passa | 1/1 | sim |
+| M4-T1-travel_2 | category-navigation › Travel | passa | 1/1 | sim |
+| M4-T1-music_14 | category-navigation › Music | passa | 1/1 | sim |
+| M4-T1-history_32 | category-navigation › History | passa | 1/1 | sim |
+| M4-T1-mystery_3 | category-navigation › Mystery | passa | 1/1 | sim |
+| M4-T1-sequential-art_5 | category-navigation › Sequential Art | passa | 1/1 | sim |
+| M4-T1-default_15 | category-navigation › Default | passa | 1/1 | sim |
+| M4-T2 | home | passa | 1/1 | sim |
+| M4-T3 | product-details #1 › Travel | passa | 1/1 | sim |
+| M4-T4 | pagination | passa | 1/1 | sim |
+| M4-T5 | category-navigation › Travel | passa | 1/1 | sim |
+| M4-T6 | home | passa | 1/1 | sim |
+| M4-T7 | product-details #1 › Travel | passa | 1/1 | sim |
+| M4-T8 | product-details #2 › Travel | passa | 1/1 | sim |
+| M4-T9 | product-details #2 › Travel | passa | 1/1 | sim |
+| M4-T10 | product-details #3 › Travel | passa | 1/1 | sim |
+| M5-T1-crime_51 | category-navigation › Crime | falha | 0/3 | sim |
+| M5-T1-historical_42 | category-navigation › Historical | falha | 0/3 | sim |
+| M5-T1-contemporary_38 | category-navigation › Contemporary | falha | 0/3 | sim |
+| M5-T1-health_47 | category-navigation › Health | falha | 0/3 | sim |
+| M5-T1-biography_36 | category-navigation › Biography | falha | 0/3 | sim |
+| M5-T1-christian-fiction_34 | category-navigation › Christian Fiction | falha | 0/3 | sim |
+| M5-T1-psychology_26 | category-navigation › Psychology | falha | 0/3 | sim |
+| M5-T1-art_25 | category-navigation › Art | falha | 0/3 | sim |
+| M5-T1-autobiography_27 | category-navigation › Autobiography | falha | 0/3 | sim |
+| M5-T1-humor_30 | category-navigation › Humor | falha | 0/3 | sim |
+| M5-T1-travel_2 | category-navigation › Travel | falha | 0/3 | sim |
+| M5-T1-music_14 | category-navigation › Music | falha | 0/3 | sim |
+| M5-T1-history_32 | category-navigation › History | falha | 0/3 | sim |
+| M5-T1-mystery_3 | category-navigation › Mystery | falha | 0/3 | sim |
+| M5-T1-sequential-art_5 | category-navigation › Sequential Art | falha | 0/3 | sim |
+| M5-T1-default_15 | category-navigation › Default | falha | 0/3 | sim |
+| M5-T2 | home | passa por engano | 3/3 | sim |
+| M5-T3 | product-details #1 › Travel | falha | 0/3 | sim |
+| M5-T4 | pagination | falha | 0/3 | sim |
+| M5-T5 | category-navigation › Travel | falha | 0/3 | sim |
+| M5-T6 | home | falha | 0/3 | sim |
+| M5-T7 | product-details #1 › Travel | falha | 0/3 | sim |
+| M5-T8 | product-details #2 › Travel | falha | 0/3 | sim |
+| M5-T9 | product-details #2 › Travel | falha | 0/3 | sim |
+| M5-T10 | product-details #3 › Travel | falha | 0/3 | sim |
+
+"passa" e "passa por engano" na matriz correspondem a teste aprovado; "falha", a teste reprovado.

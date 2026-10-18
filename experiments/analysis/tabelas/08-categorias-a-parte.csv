@@ -1,0 +1,2 @@
+categoria,entrada,execuções na categoria,"erro do teste (primeira linha, como gravado)"
+"elemento certo, teste falha",M1-T10,48/48,Error: expect(received).toBeGreaterThanOrEqual(expected)
