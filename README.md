@@ -4,7 +4,7 @@ Protótipo desenvolvido como Trabalho de Conclusão de Curso (Ciência da Comput
 
 **Título completo:** *Auto-Healing em Testes Automatizados de Interface Web: uma Abordagem Baseada em Similaridade Estrutural e Atributos Estáveis*
 
-> ⚠️ **Rodadas contra o site.** A suíte E2E, os testes de integração, a matriz de efetividade, a ida e volta, o harness (`--run`/`--resume`) e a medição da captura acessam [books.toscrape.com](https://books.toscrape.com), um **site de terceiros** que não pertence a este projeto. Neste repositório, nenhuma rodada contra o site é iniciada sem autorização explícita do responsável pelo trabalho. Os resultados oficiais já estão versionados, e **a análise inteira é reproduzível sem rede** (ver [Reprodução offline](#reprodução-offline-sem-acesso-ao-site)). O workflow de CI (`.github/workflows/playwright.yml`) roda a suíte E2E contra o site a cada push ou pull request no `main`.
+> ⚠️ **Rodadas contra o site.** A suíte E2E, os testes de integração, a matriz de efetividade, a ida e volta, o harness (`--run`/`--resume`) e a medição da captura acessam [books.toscrape.com](https://books.toscrape.com), um **site de terceiros** que não pertence a este projeto. Os resultados oficiais já estão versionados, e **a análise inteira é reproduzível sem rede** (ver [Reprodução offline](#reprodução-offline-sem-acesso-ao-site)). O workflow de CI (`.github/workflows/playwright.yml`) roda a suíte E2E contra o site a cada push ou pull request no `main`.
 
 ## Sobre o projeto
 
