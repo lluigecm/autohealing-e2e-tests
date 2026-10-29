@@ -8,6 +8,47 @@ Formato de cada entrada: **Contexto** · **Decisão** · **Alternativas consider
 
 **Sobre o histórico.** Até 2026-10-11 este arquivo era mantido só localmente. As datas das entradas anteriores a isso são as registradas na hora da escrita, e o histórico do git não as comprova. Algumas entradas comparam o resultado com a **especificação inicial da etapa**, um documento de planejamento que não é versionado. Nesses casos, o trecho relevante aparece parafraseado na própria entrada.
 
+## Índice
+
+Acrescentado em 2026-10-19, no fechamento do trabalho. O status de cada ADR está copiado da própria entrada, sem alteração. A última coluna só é preenchida quando o status ou o texto da entrada deixa algo pendente ou em aberto, e aponta onde a pendência foi resolvida. Nenhuma entrada foi reescrita para isso.
+
+| ADR | Título | Status (como está na entrada) | Pendência resolvida em |
+|---|---|---|---|
+| 001 | Escada de priorização com teto de confiança por estratégia | aceito | — |
+| 002 | `class` e `id` como desempate, nunca como critério de busca | aceito | — |
+| 003 | Ambiguidade é sinalizada mesmo quando o desempate a resolve | aceito | — |
+| 004 | Ausência de match é resultado, e `applicable` separa "não rodou" de "não achou" | aceito | — |
+| 005 | Testes unitários com DOM sintético via `setContent`, em config própria | aceito | — |
+| 006 | Achado empírico: o alvo não oferece atributos estáveis | aceito | — (formulação restringida pelo ADR-021) |
+| 007 | Heurística inaplicável é excluída do score combinado, não contada como zero | aceito, pendente de implementação | Implementado no commit `9cda31b` (2026-10-02), passo 1 de `combineConfidence` em `healing/decision/confidenceScore.ts`. Nenhum ADR posterior registra isso por escrito; o ADR-013 trata o caso "uma heurística aplicável e outra não" já com a exclusão |
+| 008 | Score estrutural por soma ponderada de quatro sinais | aceito | — |
+| 009 | Testes de integração como terceira categoria, sem tocar no ADR-005 | aceito | — |
+| 010 | Achados empíricos da similaridade estrutural no alvo real | aceito | — |
+| 011 | Ambiguidade desconta o score combinado e barra substituição automática | aceito, pendente de implementação | ADR-015 ("implementa a restrição do ADR-011") |
+| 012 | Achado: reordenação produz falso positivo com confiança máxima e sem ambiguidade | aceito | — (restrição atendida pelo ADR-014) |
+| 013 | Combinação por evidência mais forte, com desconto só na divergência | aceito | — |
+| 014 | Corroboração por texto em rampa de dois patamares | aceito | — |
+| 015 | Ambiguidade desconta o combinado, salvo quando a outra heurística a resolve | aceito (implementa a restrição do ADR-011) | — |
+| 016 | Limiar 0.7, provisório e injetável, e log das duas decisões | aceito, limiar pendente de calibração empírica | Adendo do ADR-027: o limiar fica fixo em 0.7 na rodada principal, sem calibração nos dados de avaliação; outros limiares só como sensibilidade offline (grade fixada depois dos dados no ADR-032) |
+| 017 | Interruptor de captura `HEALING_CAPTURE=off`, única mudança na Camada 1 | aceito | — |
+| 018 | Catálogo fixo de 5 mutações, alvos concretos e oráculo fora do DOM | aceito | — |
+| 019 | M1 como controle inerte: previsão, acoplamento do rating ao `class` e resultado medido | previsão registrada **antes** da execução (commit `b49c02e`); resultado medido em 2026-10-03 | A confirmação do acoplamento do rating, deixada para o harness, veio da rodada principal: M1-T10 em "elemento certo, teste falha" em 48/48 execuções (caderno, 2026-10-15; `experiments/analysis/tabelas/08-categorias-a-parte.md` e `21-previsoes.md`) |
+| 020 | Efetividade das mutações sem recuperação: previsão e matriz medida | previsão (commit `b49c02e`) e regra de relato (commit `fdde2ff`) registradas **antes** da execução; matriz medida em 2026-10-03 | As linhas da previsão marcadas "a medir no item 7" foram medidas na rodada principal; previsto contra observado em `experiments/analysis/tabelas/21-previsoes.md`, e as divergências no ADR-032 |
+| 021 | Escopo do achado do ADR-006: "elementos exercitados", não "o site inteiro" | aceito; corrige a formulação do ADR-006, sem alterar a decisão nem os resultados | — |
+| 022 | Mapa teste → alvo gerado pela execução real, com duas definições de "exercita" | implementado; a escolha da definição usada no texto está em aberto | Para o harness, ADR-027 (definição A). A definição usada no texto da monografia é escolha da escrita, fora do repositório |
+| 023 | Log de recuperação instrumentado para ablação offline do score | implementado; semântica de `healing-off` e produtor de `detectionWaitMs` em aberto | ADR-026 (pontos 1 e 3) e ADR-027 (ponto 2) |
+| 024 | Entrada cujo comportamento diverge da matriz entre os testes do harness | aceito; fixado antes da medição | — |
+| 025 | Agregação das execuções por entrada: na dúvida, contra o mecanismo | aceito; fixado antes de qualquer execução de M5 com healing ligado | — (caso não previsto, entrada sem `replace` nem `fail`, tratado no ADR-032) |
+| 026 | Condição desligada, arquivos de log e repetições do harness | aceito; fixado antes de escrever o harness e antes de qualquer execução de M5 com healing ligado | — |
+| 027 | Detecção por exceção, recuperação em `withCapture` e parâmetros do harness | aceito; fixado antes de escrever o código e antes de qualquer execução de M5 com healing ligado | — |
+| 028 | Proteção contra falha de infraestrutura no harness | aceito; fixado antes de qualquer execução do harness contra o site | — |
+| 029 | Mutação aplicada ao HTML antes da entrega, com oráculo por página e por carregamento | aceito; implementado e verificado | — |
+| 030 | Ordem das invocações, árvore limpa e regra de interrupção da rodada | aceito; fixado antes da rodada principal | — |
+| 031 | Medição complementar do overhead da captura de fingerprint | aceito; fixado antes do código da medição e antes de qualquer execução | — |
+| 032 | Decisões tomadas depois dos dados da rodada principal: entradas não acionadas, escolhas de cálculo e citação de ADRs na análise | aceito; **decidido depois de ver os dados** da rodada principal e da medição da captura (análise do commit `5363080`). Nada aqui foi fixado antes da medição, e nenhum item muda o mecanismo, a rodada ou a regra de denominador. | — (trabalho futuro registrado na própria entrada) |
+
+O ADR-032 é o único marcado como decidido depois de ver os dados da rodada principal. Este arquivo é versionado desde o commit `b874b15` (2026-10-11): a partir daí, a ordem entre cada ADR e a execução que ele regula pode ser conferida no histórico do git. Para as entradas anteriores, vale a nota "Sobre o histórico" acima.
+
 ---
 
 ## ADR-001 — Escada de priorização com teto de confiança por estratégia

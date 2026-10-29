@@ -2,3 +2,7 @@
 experiments/results/** -text
 # Saída da análise: bytes exatos, para que a conferência de determinismo compare o que foi gerado.
 experiments/analysis/** -text
+# Baseline de fingerprints: bytes exatos, comparados com o git e com a captura (ida e volta, medição da captura).
+healing/fingerprints/** -text
+# Matriz de efetividade e mapa teste → alvo, gerados: bytes exatos, comparados com o git e com a medição.
+mutation/*.json -text

@@ -507,3 +507,119 @@ Os 26 unitários novos cobrem:
 **Comandos e resultados.** `npx tsc -p .` sem erros; 154/154 unitários; duas gerações com `diff -r` sem diferenças; `--check` com 49 arquivos idênticos ao gerado.
 
 **Anomalias.** Nenhuma.
+
+---
+
+## 2026-10-19 — Fechamento
+
+**Objetivo.** Encerrar o caderno com o resumo de todas as execuções contra o site e as melhorias deixadas para trabalho futuro. Nenhuma execução contra o site. Nada aqui é dado novo: cada item aponta para a entrada ou o ADR de onde saiu.
+
+**Execuções contra o site, em ordem.**
+
+| Data | Execução | Commit | Duração real | Situação | Entrada |
+|---|---|---|---|---|---|
+| 2026-10-11 | Verificação dos 66 E2E com `HEALING` desligado, 4 execuções | sobre `b75f749` | 17,0 a 27,5 s cada | Execução 1 com 10/66 (causa perdida); 2 a 4 com 66/66 | 2026-10-11 |
+| 2026-10-12 | Primeiro piloto: 4 entradas, 8 invocações, 236 execuções | `7b8c55d` | 13min00s | Fora dos resultados. Revelou a corrida da injeção (3/96 passando no M1-T8 desligado), que levou ao ADR-029 | 2026-10-12, piloto |
+| 2026-10-12 | Reverificação da matriz com a nova injeção | sobre `94c5ab7` | 3min50s | Divergiu em 27 entradas inertes; diagnóstico e correção na entrada seguinte | 2026-10-12 |
+| 2026-10-12 | Matriz e ida e volta depois da correção | sobre `94c5ab7` | 3min46s e 24 s | Matriz bateu nas 103 entradas; 134/134 fingerprints idênticos | 2026-10-12 |
+| 2026-10-12 | Segundo piloto, mesmas 4 entradas | `54af588` | 14min47s | Fora dos resultados. 0/96 passando no M1-T8 desligado: corrida eliminada | 2026-10-12, segundo piloto |
+| 2026-10-12 | Rodada iniciada às 09:23, sem autoria reconhecida | `025ce82` | parou na 1ª invocação | **Não oficial**, não retomada (ADR-030) | 2026-10-12, 09:23 |
+| 2026-10-12 | **Rodada principal**: 103 entradas, 206 invocações, 4.040 execuções | `09289cf` | 3h05min09s | 206/206 invocações medidas; 1 reexecução por infraestrutura (M1-T9 ligada); resultados em `experiments/results/2026-10-12T16-32-03-131Z/` | 2026-10-12, rodada principal |
+| 2026-10-15 | **Medição do custo da captura**: aquecimento + 10 pares, 21 invocações | `f81e922` | 27min32s | 21/21 medidas; 2 reexecuções por infraestrutura (pares 3 e 7, desligada); resultados em `experiments/results/overhead-captura-2026-10-15T15-16-16-991Z/` | 2026-10-15, medição |
+
+Os resultados das duas rodadas oficiais estão em `experiments/analysis/RESUMO.md`, gerado por script e com a regra de cada número ao lado. Os números não são repetidos aqui, para não haver duas fontes.
+
+**Melhorias deixadas para trabalho futuro**, só as que ficaram registradas:
+
+1. **Causa do `net::ERR_FAILED`.** Registrar o erro original no `catch` da reescrita do documento. Hoje ela aborta a navegação com `route.abort('failed')` sem guardar a causa, e a reexecução da invocação 47 da rodada principal ficou sem diagnóstico (entradas de 2026-10-12, rodada principal, anomalia 2, e de 2026-10-14).
+2. **Horário de cada invocação** no `invocations.jsonl` do harness e **ambiente completo** no `plan.json` dele (entrada de 2026-10-14). A medição da captura já grava o ambiente no `plan.json` (ADR-031).
+3. **Tratamento conservador da corroboração indisponível.** Quando o fingerprint não tem texto, a corroboração não desconta nada, e foi isso que produziu o único falso positivo (M5-T10). Exemplos: um teto para o score nesses casos ou um sinal independente de posição para alvos sem texto. Registrado depois dos dados, sem mudança no mecanismo avaliado (ADR-032).
+4. **Ponderar tokens por raridade** (TF-IDF ou similar) na corroboração por texto, para neutralizar o boilerplate dos cards no lugar da rampa de dois patamares (ADR-014, "melhoria possível").
+5. **Cadeia completa de ancestrais no fingerprint**, para discriminar elementos dentro de containers repetidos. Exige mudar o schema da Camada 1 e regravar os 134 fingerprints (ADR-010, "candidato a etapa futura").
+
+**Lacunas de diagnóstico que ficaram registradas** (não são melhorias decididas, só o que não se sabe):
+- a causa da execução 1 da verificação de 2026-10-11 (saída truncada);
+- a origem da rodada das 09:23 de 2026-10-12;
+- a causa interna das cinco falhas `fetch failed` da pré-verificação e do `net::ERR_CERT_AUTHORITY_INVALID` do par 7, na medição da captura;
+- o `error-context` do teste de paginação que falhou no par 5 da medição da captura, perdido porque `test-results/` é limpo a cada invocação.
+
+**Anomalias.** Nenhuma.
+
+---
+
+## 2026-10-28 — Verificação de reprodutibilidade num clone limpo
+
+**Objetivo.** Mostrar que um clone novo do repositório, sem nada da cópia de trabalho de desenvolvimento, reproduz a checagem de tipos, os unitários, a conferência dos manifestos e a análise. **Nada aqui acessa o site:** a config unitária não tem `baseURL` e monta o DOM por `setContent`/`route`, os manifestos e a análise só leem arquivos e o git, e o único acesso à rede é o `npm ci`, ao registro do npm. Os logs ficaram numa pasta temporária fora do repositório e não são versionados, então os números e as mensagens estão todos escritos abaixo.
+
+**Ambiente.** Windows 11 Home, build 26200.9711. Git 2.53.0.windows.1 com a **configuração padrão do Git para Windows**: `core.autocrlf=true` na config de sistema e nenhum `core.autocrlf` na config global. Node v24.14.0, npm 11.9.0, Playwright 1.63.0.
+
+**Comandos**, iguais nas duas tentativas, cada um com a saída completa gravada em arquivo:
+
+1. `git clone -c core.longpaths=true --branch docs/fechamento <repositório local> <pasta vazia>`, clonado do repositório local e não do GitHub;
+2. `npm ci`;
+3. `npx tsc --noEmit`;
+4. `npx playwright test --config=playwright.unit.config.ts`;
+5. `sha256sum -c --quiet MANIFEST.sha256`, dentro de `experiments/results/2026-10-12T16-32-03-131Z/` e de `experiments/results/overhead-captura-2026-10-15T15-16-16-991Z/`;
+6. `node experiments/resultsAnalysis.mts --check`.
+
+### Tentativa 1 — commit `ed49ba0`: falhou
+
+| Passo | Resultado |
+|---|---|
+| Clone | 4.368 arquivos |
+| `npm ci` | 7 pacotes, 0 vulnerabilidades |
+| `tsc --noEmit` | sem erros |
+| Unitários | **153 passaram, 1 falhou** |
+| Manifestos | 2.506/2.506 e 1.599/1.599, nenhuma saída do `--quiet` |
+| `--check` | **falhou**, código de saída 1 |
+
+- **Unitário que falhou:** `healing/experiments/overheadRun.spec.mts:142` › "baseline lida do git: os 134 fingerprints versionados, com os mesmos bytes da cópia de trabalho". A mensagem foi `Error: expect(received).toBe(expected) // Object.is equality`, com `Expected: true` e `Received: false`, na linha 149: `readFileSync(path.join(working, name)).equals(bytes)`.
+- **Saída do `--check`:** `Diferente do gerado: tabelas/01-integridade.md; sobrando: nenhum`. Regerando a análise no clone, a única linha diferente foi "Matriz de efetividade lida do commit da rodada (`git show 09289cf:mutation/effectiveness-matrix.json`); idêntica à da árvore atual:", que saiu **não** no lugar de **sim**.
+
+**Causa.** Fim de linha no checkout. `git ls-files --eol` no clone mostrou `i/lf w/crlf` nos 134 fingerprints de `healing/fingerprints/` e nos dois JSON de `mutation/`. Na cópia de trabalho de desenvolvimento, os mesmos arquivos estavam em `i/lf w/lf`. Com `core.autocrlf=true`, o Git converte LF em CRLF no checkout de todo arquivo sem atributo. O `.gitattributes` só marcava `experiments/results/**` e `experiments/analysis/**` como `-text`. As duas verificações comparam os bytes do git (LF) com os do disco (CRLF) e acusaram a diferença. Os dados não foram afetados, e os manifestos conferiram.
+
+**Confirmação da causa**, no mesmo dia, sem acesso ao site:
+- Num segundo clone do mesmo commit, com `-c core.autocrlf=false`, tudo passou: `tsc` sem erros, **154/154** unitários, os dois manifestos conferidos, `--check` com "49 arquivos idênticos ao gerado." e `git status` limpo.
+- No clone da tentativa 1, com `-text` para os dois caminhos acrescentado ao `.gitattributes` e um novo checkout só desses arquivos, também deu 154/154 e `--check` com 49 arquivos idênticos.
+
+### Correção — commit `9145d35`
+
+Duas linhas no `.gitattributes`, no mesmo padrão das que já existiam:
+
+```
+healing/fingerprints/** -text
+mutation/*.json -text
+```
+
+Os blobs não mudaram, porque já estavam em LF. Na cópia de trabalho de desenvolvimento também não mudou nada além do próprio `.gitattributes`.
+
+**Inventário das comparações de bytes do código**, feito antes do commit para confirmar que não havia outro caso:
+
+| Arquivos comparados | Onde | Cobertura |
+|---|---|---|
+| `healing/fingerprints/**` | git contra o disco no unitário de `overheadRun`; git contra a captura em `overheadRun.mts`; disco contra a captura em `roundtrip.mts`; hash antes/depois em `overhead.mts` e `integration/mutation.spec.ts` | **nova** |
+| `mutation/effectiveness-matrix.json` | `git show` contra o disco em `resultsAnalysis.mts`; matriz medida contra o disco em `integration/mutation.spec.ts` | **nova** |
+| `mutation/target-test-map.json` | nenhuma comparação de bytes no código (o harness só faz parse); coberto pelo mesmo glob por ser JSON gerado | nova |
+| `experiments/results/**` | manifesto SHA-256 | já existia |
+| `experiments/analysis/**` | `--check` | já existia |
+
+O `git diff --quiet` dos fingerprints em `resultsAnalysis.mts` não depende do atributo, porque o próprio git normaliza o fim de linha.
+
+### Tentativa 2 — commit `9145d35`: passou
+
+Clone novo e a sequência completa, com a mesma configuração padrão, das 21:47:59 às 21:48:44 (horário local).
+
+| Passo | Resultado |
+|---|---|
+| Clone | 4.368 arquivos. `git ls-files --eol`: os 136 arquivos dos dois caminhos em `w/lf attr/-text` |
+| `npm ci` | 7 pacotes, 0 vulnerabilidades |
+| `tsc --noEmit` | sem erros, saída vazia |
+| Unitários | **154 passaram** (9,3 s), nenhum falhou |
+| Manifesto da rodada principal | 2.506/2.506, nenhuma saída do `--quiet` |
+| Manifesto da medição da captura | 1.599/1.599, nenhuma saída do `--quiet` |
+| `--check` | "49 arquivos idênticos ao gerado.", código de saída 0 |
+| `git status --porcelain` depois de tudo | vazio |
+
+**Consequência para quem clonar.** No Windows, com a configuração padrão, basta `core.longpaths` no clone, como diz o README. Antes do `9145d35`, um clone novo falhava no unitário acima e no `--check` sem nenhum defeito nos dados. Pela leitura do código, a ida e volta (`roundtrip.mts`) também falharia, pelo mesmo motivo: ela compara a baseline do disco com a captura. Isso não foi executado, porque ela acessa o site.
+
+**Anomalias.** A própria falha da tentativa 1, descrita acima.

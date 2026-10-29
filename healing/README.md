@@ -1,6 +1,6 @@
-# Camada 1 — Captura de Fingerprint · Camada 3 — Heurísticas e Score · Camada 4 — Decisão
+# Camada 1 — Captura de Fingerprint · Camada 2 — Detecção · Camada 3 — Heurísticas e Score · Camada 4 — Decisão
 
-Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte baseline (Camada 1), consome esse baseline em duas heurísticas de recuperação e combina as duas num score de confiança (Camada 3), e converte esse score em decisão — substituir o seletor ou falhar (Camada 4). A detecção de falha (Camada 2) ainda não existe: o mecanismo é exercitado por chamada direta, não integrado ao fluxo dos testes.
+Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte baseline (Camada 1), detecta o locator quebrado dentro de `withCapture` (Camada 2), consome o baseline em duas heurísticas de recuperação e combina as duas num score de confiança (Camada 3), e converte esse score em decisão — substituir o seletor ou falhar (Camada 4). A recuperação fica atrás de `HEALING=on`, desligada por padrão: a suíte baseline roda sem healing.
 
 ## Módulos
 
@@ -26,8 +26,8 @@ Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte 
 
 ```bash
 npm test               # 66 testes E2E (playwright.config.ts) — regressão funcional da suíte baseline
-npm run test:unit      # 84 testes unitários (playwright.unit.config.ts) — lógica do mecanismo, zero rede
-npm run test:integration  # 17 testes de integração (playwright.integration.config.ts) — mecanismo contra o alvo real
+npm run test:unit      # 154 testes unitários (playwright.unit.config.ts) — lógica do mecanismo, da mutação e dos experimentos, zero rede
+npm run test:integration  # 18 testes de integração (playwright.integration.config.ts) — mecanismo contra o alvo real
 ```
 
 São **três números com propósitos distintos e não devem ser somados num total só**: a suíte E2E mede regressão funcional, os unitários validam a lógica do mecanismo sem tocar a rede (DOM via `page.setContent()`), e os de integração provam que o mecanismo funciona no site avaliado. Só a terceira categoria depende de rede, e é a única com `retries` — uma instabilidade de rede não deve ser lida como falha de heurística.
@@ -174,7 +174,7 @@ A corroboração por texto é o **único sinal do mecanismo independente de posi
 
 `decide(fingerprint, confidence, options?)` devolve `replace` ou `fail`, sempre registrando a decisão.
 
-- **Limiar:** `CONFIDENCE_THRESHOLD = 0.7`, inclusivo, sobrescrevível por chamada. **Valor provisório** — a etapa de experimentos vai calibrá-lo, e ele não deve ser citado como validado.
+- **Limiar:** `CONFIDENCE_THRESHOLD = 0.7`, inclusivo, sobrescrevível por chamada. O valor foi escolhido por argumento, a partir de quatro cenários medidos, e não deve ser citado como validado. Na rodada de experimentos ele ficou fixo, sem calibração nos dados de avaliação; outros limiares aparecem só na análise de sensibilidade offline (`experiments/analysis/`), secundária e aproximada.
 - **Acima:** substitui e devolve o candidato; a entrada de log tem página, seletor original, descrição do candidato, score, limiar vigente, heurísticas contribuintes, flags e o timestamp da **decisão**.
 - **Abaixo, incluindo "sem confiança":** falha sem recuperação e **não** devolve o candidato. Falhar visivelmente é melhor que mascarar defeito real com um falso positivo silencioso.
 - O log registra as **duas** decisões: sem as falhas não há denominador para calcular taxa de recuperação nos experimentos.
@@ -197,7 +197,17 @@ Além do que a revisão humana precisa, a entrada de log carrega o necessário p
 2. `timeRecoveredAction(attempt, action)` cronometra a ação com o candidato, só quando a decisão foi `replace`. Um erro da ação é devolvido, não lançado, para que a entrada seja gravada mesmo assim.
 3. `completeEntry(attempt, run, { detectionWaitMs, actionMs })` monta a entrada, e `jsonlSink(arquivo).write(entrada)` a acrescenta ao arquivo. O sink só escreve, nunca lê, e é chamado depois da ação, fora de qualquer janela medida.
 
-A espera da detecção vem de quem chama, porque a detecção (Camada 2) ainda não existe.
+A espera da detecção (`detectionWaitMs`) é medida por `withCapture`: vai do início da ação até a exceção.
+
+## Detecção (Camada 2, em `withCapture.ts`)
+
+Com `HEALING=on`, a ação roda dentro de um `try`. Se ela lança exceção e, depois da falha, `locator.count()` é **0**, o locator é tratado como quebrado e a recuperação é tentada (`attemptRecovery` → `decide` → ação no candidato). Com o elemento presente (um ou vários), a falha não é de localização e o erro original é relançado sem recuperação.
+
+- **Sem checagem prévia.** `isVisible()` sobre um elemento que legitimamente não existe (o link "next" na última página) devolve `false`, não lança, e nunca aciona a recuperação. Pelo mesmo motivo, uma falha que apareça só numa asserção do spec, fora de `withCapture`, também não aciona.
+- **Decisão `fail` ou ação recuperada que falha:** o erro original é relançado, com a tentativa anexada como `cause`, e o teste falha como falharia sem healing.
+- **Ação recuperada não persiste fingerprint:** o elemento achado pela heurística não é o que o seletor original descreve.
+- **Limite do detector:** um elemento presente mas inutilizável (oculto, coberto) nunca aciona a recuperação. O detector trata só a ausência.
+- Os experimentos fixam `actionTimeout: 5_000` (`experiments/harness.config.ts`), nas duas condições: sem ele, a ação sobre um locator ausente esperaria o timeout do teste inteiro e o teste morreria antes de a detecção rodar.
 
 ### O que o score mostrou no alvo real
 
@@ -214,4 +224,4 @@ Duas leituras que valem para o texto do trabalho: no alvo avaliado **só element
 
 ## Estado atual
 
-Uma execução completa da suíte baseline (66 testes) gera **134 fingerprints** em 34 páginas. Com a combinação e a decisão implementadas, o mecanismo está funcionalmente completo exceto pela Camada 2: nada ainda **detecta** a falha de locator e chama `combineConfidence` automaticamente.
+Uma execução completa da suíte baseline (66 testes) gera **134 fingerprints** em 34 páginas. As quatro camadas estão implementadas e foram avaliadas na rodada de experimentos (`experiments/`). Os resultados estão em `experiments/analysis/RESUMO.md`.
