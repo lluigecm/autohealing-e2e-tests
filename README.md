@@ -60,6 +60,7 @@ experiments/
   overhead.mts        Orquestrador da medição complementar do custo da captura
   roundtrip.mts       Ida e volta da reescrita de documentos, sem mutação
   resultsAnalysis.mts Análise: gera experiments/analysis/ a partir de experiments/results/
+  ablationAnalysis.mts Ablação do score em três configurações, chamada pela análise
   results/            Rodadas oficiais copiadas sem edição, cada uma com MANIFEST.sha256
   analysis/           Tabelas (.md e .csv), gráficos (.svg) e RESUMO.md, gerados por script
   CADERNO.md          Caderno de experimentos: o que foi executado, quando, com que commit e o que se observou
@@ -75,7 +76,7 @@ São três categorias com propósitos distintos, e **não devem ser somadas num 
 | Categoria | Testes | Comando | Rede |
 |---|---|---|---|
 | E2E (suíte baseline) | **66**: 2 fluxos fixos (home e paginação) + 4 fluxos × 16 categorias (navegação por categoria e 3 de detalhes do produto) | `npm test` | site |
-| Unitários | **154**, em 15 arquivos | `npm run test:unit` | nenhuma: DOM via `page.setContent()` e `page.route` |
+| Unitários | **167**, em 16 arquivos | `npm run test:unit` | nenhuma: DOM via `page.setContent()` e `page.route` |
 | Integração | **18**, em 4 arquivos (estrutural 9, score 6, mutação 2, recuperação 1) | `npm run test:integration` | site |
 
 Contagens conferidas com `npx playwright test --config=<config> --list`, que lista sem executar.
@@ -100,7 +101,7 @@ Nada nesta seção faz requisição ao books.toscrape.com.
 
 ```bash
 npx tsc --noEmit                          # checagem de tipos
-npm run test:unit                         # 154 unitários
+npm run test:unit                         # 167 unitários
 node experiments/harness.mts              # simulação do plano da rodada principal (padrão: não executa)
 node experiments/overhead.mts             # simulação do plano da medição da captura
 node experiments/resultsAnalysis.mts --check   # regenera a análise em memória e compara byte a byte
@@ -130,7 +131,7 @@ Com o site inalterado, a regravação produz bytes idênticos aos versionados, e
 ### Unitários e integração
 
 ```bash
-npm run test:unit          # 154, sem rede
+npm run test:unit          # 167, sem rede
 npm run test:integration   # 18, contra o site; inclui a matriz de efetividade em modo de comparação
 ```
 

@@ -26,7 +26,7 @@ Captura e persiste o estado "saudável" de cada elemento exercitado pela suíte 
 
 ```bash
 npm test               # 66 testes E2E (playwright.config.ts) — regressão funcional da suíte baseline
-npm run test:unit      # 154 testes unitários (playwright.unit.config.ts) — lógica do mecanismo, da mutação e dos experimentos, zero rede
+npm run test:unit      # 167 testes unitários (playwright.unit.config.ts) — lógica do mecanismo, da mutação e dos experimentos, zero rede
 npm run test:integration  # 18 testes de integração (playwright.integration.config.ts) — mecanismo contra o alvo real
 ```
 
