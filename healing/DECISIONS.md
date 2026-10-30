@@ -46,8 +46,9 @@ Acrescentado em 2026-10-19, no fechamento do trabalho. O status de cada ADR est�
 | 030 | Ordem das invocações, árvore limpa e regra de interrupção da rodada | aceito; fixado antes da rodada principal | — |
 | 031 | Medição complementar do overhead da captura de fingerprint | aceito; fixado antes do código da medição e antes de qualquer execução | — |
 | 032 | Decisões tomadas depois dos dados da rodada principal: entradas não acionadas, escolhas de cálculo e citação de ADRs na análise | aceito; **decidido depois de ver os dados** da rodada principal e da medição da captura (análise do commit `5363080`). Nada aqui foi fixado antes da medição, e nenhum item muda o mecanismo, a rodada ou a regra de denominador. | — (trabalho futuro registrado na própria entrada) |
+| 033 | Ablação do score de confiança sobre os dados da rodada principal | aceito; **especificação vinda do texto da monografia e script escrito depois da coleta e da análise principal**. Nenhuma regra de classificação, agregação, denominador ou limiar muda. | — |
 
-O ADR-032 é o único marcado como decidido depois de ver os dados da rodada principal. Este arquivo é versionado desde o commit `b874b15` (2026-10-11): a partir daí, a ordem entre cada ADR e a execução que ele regula pode ser conferida no histórico do git. Para as entradas anteriores, vale a nota "Sobre o histórico" acima.
+Acrescentado em 2026-10-30: o ADR-032 e o ADR-033 são os únicos marcados como decididos depois de ver os dados da rodada principal. Até essa data, a frase dizia que o ADR-032 era o único. Este arquivo é versionado desde o commit `b874b15` (2026-10-11): a partir daí, a ordem entre cada ADR e a execução que ele regula pode ser conferida no histórico do git. Para as entradas anteriores, vale a nota "Sobre o histórico" acima.
 
 ---
 
@@ -865,3 +866,65 @@ Os quartis são calculados por interpolação linear entre os valores ordenados 
 - (e) Ajustar o tratamento da corroboração indisponível e repetir a rodada: fora do escopo. Seria calibrar o mecanismo nos dados de avaliação (adendo do ADR-027).
 
 **Consequência.** O resumo da análise traz 1/24 com 1/23 ao lado e 3/6 com 3/5 ao lado, cada par apontando para este ADR. As três escolhas de cálculo ficam registradas como posteriores aos dados. O falso positivo do M5-T10 entra no texto como achado sobre os alvos sem texto, não como defeito corrigido.
+
+---
+
+## ADR-033 — Ablação do score de confiança sobre os dados da rodada principal
+
+**Data:** 2026-10-30 · **Etapa:** análise dos resultados · **Status:** aceito. A **especificação veio do texto da monografia**, e o **script foi escrito depois da coleta dos dados** e depois da análise principal (ADR-032). Nenhuma regra de classificação, de agregação, de denominador ou de limiar muda.
+
+**Contexto.**
+- O texto da monografia promete uma ablação do score de confiança.
+- As três configurações já estavam no ADR-023, versionado no commit `b874b15` (2026-10-11), antes de qualquer execução contra o site. O mesmo ADR instrumentou o log para recalculá-las offline: `rawScore`, `factors`, `textSimilarity`, `candidateIsOracle` e `heuristics`.
+- Nenhum ADR fixou como relatar a ablação. A análise de 2026-10-17 não a calcula nem a registra como pendência.
+- A especificação abaixo vem do texto da monografia. Ela fica transcrita aqui porque o texto não é versionado.
+- Ela foi escrita **depois de ver os dados**. A análise principal já publicava os scores de cada entrada (`experiments/analysis/tabelas/20-scores-por-entrada.md`) e a sensibilidade do limiar (`19-sensibilidade-limiar.md`). Por isso, o resultado de parte das configurações já era previsível pelo que estava publicado.
+
+**Decisão — especificação, como veio do texto da monografia.**
+- **Três configurações**, todas com o limiar principal de 0,7, inclusivo (ADR-016):
+  - (i) saída bruta da heurística de similaridade estrutural: `rawScore`;
+  - (ii) `rawScore × factors.ambiguity`;
+  - (iii) score completo, ou seja, o score registrado.
+- **Mesmas regras dos resultados principais:**
+  - classificação e agregação do ADR-024, do ADR-025 e do ADR-032;
+  - os mesmos denominadores, 6 e 24;
+  - a mesma classe "não acionado";
+  - as mesmas duas frações lado a lado: denominador da matriz e, ao lado, sem as entradas não acionadas.
+- **O candidato não muda entre as configurações; só a decisão muda.** Pelo ADR-023, o candidato é escolhido antes dos fatores, e os fatores só multiplicam.
+- **Decisão de falhar que vira substituição no elemento certo:** o desfecho do teste nesse caminho não foi observado, então a execução é **indeterminada**, nunca sucesso. A regra e o código são os da sensibilidade do limiar (`classifyCosmeticAt` e `aggregateRecoveryAt` em `experiments/resultsAnalysis.mts`). Uma entrada indeterminada não conta como recuperada.
+
+**Decisão — verificações que interrompem o script.**
+1. A configuração (iii) reproduz exatamente os resultados principais:
+   - a classe de cada execução;
+   - o desfecho de cada uma das 30 entradas;
+   - as frações de recuperação e de falso positivo.
+2. Nos 930 eventos do log, `score = rawScore × disagreement × ambiguity × text`, com tolerância absoluta de 1e-9. Toda exceção é relatada.
+3. `factors.disagreement = 1` em todos os eventos. Toda exceção é relatada.
+4. Nenhum evento tem a heurística de atributos estáveis aplicável. Toda exceção é relatada.
+5. **Complementar, acrescentada aqui:** `rawScore` é igual ao score da heurística estrutural em todos os eventos. É isso que faz a configuração (i) ser "a saída bruta da estrutural".
+
+**Decisão — o que não muda.**
+- Não mudam o limiar, as classes, a agregação nem os denominadores.
+- Não mudam o mecanismo, a rodada nem os dados.
+- Nenhuma saída já existente de `experiments/analysis/` muda, exceto o `RESUMO.md`, que ganha uma seção nova.
+
+**Decisão — implementação.**
+- **Código.** As funções da ablação ficam num módulo próprio, `experiments/ablationAnalysis.mts`. Ele é chamado por `experiments/resultsAnalysis.mts`, que gera as duas tabelas novas em `experiments/analysis/tabelas/` e a seção do `RESUMO.md`.
+  - O pedido era o script dentro de `experiments/analysis/`. Só que esse diretório é a saída gerada: a geração apaga todo arquivo que não gerou, e o `--check` acusa arquivo sobrando.
+  - O `RESUMO.md` também é gerado e não se edita à mão.
+- **Unitários.** Ficam em `healing/experiments/`, porque a config unitária só encontra specs em `healing/`.
+- **Falso positivo por alvo distinto.** Aparece ao lado do bruto em cada configuração, como manda a regra de relato do ADR-020.
+- **Ressalva da sensibilidade, que vale aqui também.** A ablação é **secundária e aproximada**: o log só tem o caminho que o score completo produziu (adendo do ADR-027).
+  - Pelo código, os três fatores valem no máximo 1. Então (i) ≥ (ii) ≥ (iii), e nas configurações (i) e (ii) uma decisão só pode passar de `fail` para `replace`.
+  - Numa entrada cosmética, a passagem para `replace` fora do oráculo é cura incorreta, sem depender do teste (ADR-025).
+  - Numa entrada M5, qualquer `replace` é falso positivo.
+
+**Alternativas consideradas.**
+- (a) Script autônomo que escreve as tabelas e acrescenta a seção ao `RESUMO.md` por conta própria: descartado. A geração seguinte apagaria os arquivos do script, e o mesmo resumo passaria a ter duas fontes.
+- (b) Contar como sucesso a execução que passaria de `fail` para `replace` no elemento certo, supondo que o teste passaria: descartado pela especificação. O desfecho não foi observado, e o mesmo critério já vale na sensibilidade.
+- (c) Medir cada configuração numa rodada nova: fora do escopo. Exigiria execuções contra o site e um mecanismo diferente do avaliado (adendo do ADR-027).
+
+**Consequência.**
+- A ablação entra no texto como análise **secundária, aproximada e posterior aos dados**, ao lado da sensibilidade do limiar.
+- A configuração (iii) é o resultado principal por construção. A verificação 1 garante que o código chega nele.
+- As verificações 2 a 5 garantem que (i) e (ii) são de fato o que os nomes dizem.
