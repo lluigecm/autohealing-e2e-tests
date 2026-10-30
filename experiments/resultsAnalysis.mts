@@ -18,6 +18,8 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { ABLATION_CONFIGS, ablateEntry, checkLog, reproductionProblems, summarizeConfig } from './ablationAnalysis.mts';
+import type { AblationInput, AblationRules, EntryAblation } from './ablationAnalysis.mts';
 import { analyze as analyzeCapture, quantile, summarize } from './overheadAnalysis.mts';
 import type { Summary } from './overheadAnalysis.mts';
 import { testEvents } from './runSupport.mts';
@@ -52,6 +54,7 @@ const RULE = {
   textCorroboration: 'ADR-014',
   positionalFalsePositive: 'ADR-012',
   postData: 'ADR-032, decidido depois dos dados',
+  ablation: 'ADR-033, especificação da monografia e script posteriores aos dados',
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -99,7 +102,9 @@ export interface LogEntry {
   flags: string[];
   reason: string | null;
   candidate: string | null;
+  rawScore: number | null;
   factors: { disagreement: number; ambiguity: number; text: number } | null;
+  heuristics: Array<{ heuristic: string; applicable: boolean; score: number }> | null;
   candidateIsOracle: boolean | null;
   run: { entryId: string; testId: string; repetition: number; condition: string } | null;
   timings: { detectionWaitMs: number; recoveryMs: number; actionMs: number | null };
@@ -1289,6 +1294,122 @@ export function buildAnalysis(): Map<string, string> {
     '',
     `- Recalculada offline a partir dos scores registrados; **secundária e aproximada** (${RULE.sensitivity}; grade de 0,05, ${RULE.postData}). No limiar principal, ${br(MAIN_THRESHOLD, 1)}: recuperadas ${frac(at(MAIN_THRESHOLD).rec, recoveryIds.length)}, falso positivo bruto ${frac(at(MAIN_THRESHOLD).fp, fpIds.length)}. ${link('19-sensibilidade-limiar')} · ${link('20-scores-por-entrada')}`,
     `- Em 0,65: recuperadas ${frac(at(0.65).rec, recoveryIds.length)} (indeterminadas ${at(0.65).ind}), falso positivo ${frac(at(0.65).fp, fpIds.length)}. Em 0,75: recuperadas ${frac(at(0.75).rec, recoveryIds.length)}, falso positivo ${frac(at(0.75).fp, fpIds.length)}.`,
+    '',
+  );
+
+  // Ablação do score (secundária, aproximada e posterior aos dados) ---------------
+  const ablationRules: AblationRules = {
+    decisionAt,
+    classifyCosmetic,
+    classifyCosmeticAt,
+    aggregateRecovery,
+    aggregateRecoveryAt,
+    classifyDefect,
+    aggregateFalsePositive,
+  };
+  const ablationLog = main.executions.filter((e) => e.condition === 'healing-on').flatMap((e) => e.log);
+  const logChecks = checkLog(ablationLog);
+  const ablationInputs: AblationInput[] = [...recoveryIds, ...fpIds].map((id) => ({
+    id,
+    target: matrixById.get(id)!.target,
+    set: recoveryIds.includes(id) ? 'recuperação' : 'falso positivo',
+    executions: onKept(id),
+  }));
+  const reproduction = reproductionProblems(ablationInputs, MAIN_THRESHOLD, ablationRules);
+  const ablated: EntryAblation[] = ABLATION_CONFIGS.flatMap((c) => ablationInputs.map((input) => ablateEntry(input, c.id, MAIN_THRESHOLD, ablationRules)));
+  const configSummaries = ABLATION_CONFIGS.map((c) => summarizeConfig(c.id, ablated));
+  const full = configSummaries.find((s) => s.config === 'iii')!;
+  // [o que se compara, configuração (iii), resultado principal]
+  const fractionMismatch = [
+    ['recuperadas', full.recovery.recovered, recovered],
+    ['indeterminadas', full.recovery.indeterminate, 0],
+    ['entradas com cura incorreta', full.recovery.wrongCure, categoryRows.filter((r) => r[0] === 'cura incorreta').length],
+    ['recuperação não acionada', full.recovery.notTriggered.join(', '), recoveryNotTriggered.join(', ')],
+    ['falso positivo', full.falsePositive.count, fpCount],
+    ['falso positivo não acionado', full.falsePositive.notTriggered.join(', '), fpNotTriggered.join(', ')],
+    ['alvos com falso positivo', full.byTarget.fp, fpTargets],
+    ['alvos não acionados', full.byTarget.idle, fpTargetsIdle],
+    ['T1 com falso positivo', full.byTarget.t1.fp, t1Fp],
+  ].filter(([, got, want]) => String(got) !== String(want));
+  const failedChecks = logChecks.filter((c) => c.failures.length > 0);
+  if (reproduction.length > 0 || failedChecks.length > 0 || fractionMismatch.length > 0) {
+    throw new Error(
+      `verificação da ablação falhou, análise interrompida (${RULE.ablation}):\n${[
+        ...reproduction.map((p) => `(iii) não reproduz o resultado principal: ${p}`),
+        ...fractionMismatch.map(([what, got, want]) => `(iii) não reproduz o resultado principal: ${what} ${got}, principal ${want}`),
+        ...failedChecks.flatMap((c) => c.failures.map((f) => `${c.name}: ${f}`)),
+      ].join('\n')}`,
+    );
+  }
+  const sideFrac = (k: number, total: number, idle: number) => (idle > 0 ? frac(k, total - idle) : 'igual');
+  addTable(out, {
+    name: '23-ablacao-score',
+    title: `Ablação do score de confiança, limiar ${br(MAIN_THRESHOLD, 1)} — SECUNDÁRIA, APROXIMADA E POSTERIOR AOS DADOS`,
+    rule: `${RULE.ablation}; classes e agregação, ${RULE.classes}; denominador da matriz, ${RULE.applied}; não acionado, ${RULE.postData}; indeterminada como na sensibilidade, ${RULE.sensitivity}`,
+    headers: [
+      'configuração', 'recuperadas', 'ao lado, sem não acionadas', 'indeterminadas', 'entradas com cura incorreta',
+      'falso positivo bruto', 'ao lado, sem não acionadas', 'falso positivo por alvo', 'ao lado, sem alvos não acionados', 'T1 (categorias)', 'entradas com falso positivo',
+    ],
+    rows: configSummaries.map((s) => [
+      ABLATION_CONFIGS.find((c) => c.id === s.config)!.label,
+      frac(s.recovery.recovered, s.recovery.total),
+      sideFrac(s.recovery.recovered, s.recovery.total, s.recovery.notTriggered.length),
+      n(s.recovery.indeterminate),
+      n(s.recovery.wrongCure),
+      frac(s.falsePositive.count, s.falsePositive.total),
+      sideFrac(s.falsePositive.count, s.falsePositive.total, s.falsePositive.notTriggered.length),
+      frac(s.byTarget.fp, s.byTarget.total),
+      sideFrac(s.byTarget.fp, s.byTarget.total, s.byTarget.idle),
+      `${s.byTarget.t1.fp} de ${s.byTarget.t1.total}`,
+      s.falsePositive.ids.join('; ') || 'nenhuma',
+    ]),
+    notes: [
+      'Recalculada offline a partir do log (rawScore e fatores), sem nenhuma execução nova. O candidato é o mesmo nas três configurações; só a decisão muda. É aproximada: o log só tem o caminho que o score completo produziu, e uma substituição diferente mudaria o resto do teste.',
+      '"Indeterminada": alguma execução passaria de fail para replace no elemento certo, e o desfecho do teste nesse caminho não foi observado. Nenhuma execução indeterminada conta como sucesso, e uma entrada indeterminada não conta como recuperada.',
+      `"Ao lado": a fração sem as entradas (ou alvos) não acionadas, que não dependem da configuração (${RULE.postData}).`,
+      `Verificações, todas obrigatórias (${RULE.ablation}): (1) a configuração (iii) reproduz as classes de cada execução, o desfecho de cada uma das ${ablationInputs.length} entradas e as frações do resultado principal: sim. ` +
+        logChecks.map((c, i) => `(${i + 2}) ${c.name}: ${frac(c.checked - c.failures.length, c.checked)} eventos do log`).join('; ') +
+        '. Tolerância numérica absoluta de 1e-9.',
+    ],
+  });
+  const decisionCell = (r: EntryAblation) => (r.decisions.length > 0 ? counts(r.decisions) : 'mecanismo não acionado');
+  addTable(out, {
+    name: '24-ablacao-por-entrada',
+    title: `Ablação do score por entrada dos denominadores, limiar ${br(MAIN_THRESHOLD, 1)} — SECUNDÁRIA, APROXIMADA E POSTERIOR AOS DADOS`,
+    rule: `${RULE.ablation}; classes e agregação, ${RULE.classes}`,
+    headers: [
+      'entrada', 'conjunto', 'entradas de log',
+      ...ABLATION_CONFIGS.flatMap((c) => [`score (${c.id})`, `decisão (${c.id}, entradas de log)`, `desfecho (${c.id})`]),
+    ],
+    rows: ablationInputs.map((input) => {
+      const per = ABLATION_CONFIGS.map((c) => ablated.find((r) => r.id === input.id && r.config === c.id)!);
+      const logCount = input.executions.flatMap((e) => e.log).length;
+      return [
+        input.id, input.set, n(logCount),
+        ...per.flatMap((r) => [logCount > 0 ? ({ list: r.scores, d: 3 } as Cell) : 'sem entrada de log', decisionCell(r), r.outcome]),
+      ];
+    }),
+    notes: [
+      'Configurações: (i) rawScore, a saída bruta da heurística estrutural; (ii) rawScore × fator de ambiguidade; (iii) score completo, o registrado.',
+      'Score: valores distintos da configuração nas entradas de log da entrada. Decisão: contagem das decisões que a configuração dá às entradas de log, com o limiar inclusivo.',
+    ],
+  });
+  const configLine = (s: (typeof configSummaries)[number]) => {
+    const label = ABLATION_CONFIGS.find((c) => c.id === s.config)!.label;
+    const recSide = s.recovery.notTriggered.length > 0 ? ` (${frac(s.recovery.recovered, s.recovery.total - s.recovery.notTriggered.length)} sem ${s.recovery.notTriggered.join(', ')})` : '';
+    const fpSideText = s.falsePositive.notTriggered.length > 0 ? ` (${frac(s.falsePositive.count, s.falsePositive.total - s.falsePositive.notTriggered.length)} sem ${s.falsePositive.notTriggered.join(', ')})` : '';
+    return (
+      `- **${label}:** recuperadas ${frac(s.recovery.recovered, s.recovery.total)}${recSide}, indeterminadas ${s.recovery.indeterminate}, com cura incorreta ${s.recovery.wrongCure}; ` +
+      `falso positivo bruto ${frac(s.falsePositive.count, s.falsePositive.total)}${fpSideText}${s.falsePositive.ids.length > 0 ? ` (${s.falsePositive.ids.join(', ')})` : ''}; ` +
+      `por alvo ${frac(s.byTarget.fp, s.byTarget.total)}; T1: ${s.byTarget.t1.fp} de ${s.byTarget.t1.total} categorias.`
+    );
+  };
+  summary.push(
+    '## 9. Ablação do score (secundária, aproximada e posterior aos dados)',
+    '',
+    `- Recalculada offline a partir do log, com o limiar principal de ${br(MAIN_THRESHOLD, 1)}; o candidato é o mesmo nas três configurações e só a decisão muda. Especificação vinda do texto da monografia e script escritos depois dos dados (${RULE.ablation}); classes e agregação do ${RULE.classes}, denominador da matriz (${RULE.applied}) e "não acionado" (${RULE.postData}). Execução que passaria de fail para replace no elemento certo fica indeterminada, nunca sucesso (${RULE.sensitivity}). ${link('23-ablacao-score')} · ${link('24-ablacao-por-entrada')}`,
+    ...configSummaries.map(configLine),
+    `- Verificações: a configuração (iii) reproduz o resultado principal; ${logChecks.map((c) => `${c.name} em ${frac(c.checked - c.failures.length, c.checked)} eventos`).join('; ')}.`,
     '',
   );
 
