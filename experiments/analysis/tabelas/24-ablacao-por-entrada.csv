@@ -1,0 +1,31 @@
+entrada,conjunto,entradas de log,score (i),"decisão (i, entradas de log)",desfecho (i),score (ii),"decisão (ii, entradas de log)",desfecho (ii),score (iii),"decisão (iii, entradas de log)",desfecho (iii)
+M1-T8,recuperação,96,1.000,replace 96/96,recuperada,1.000,replace 96/96,recuperada,1.000,replace 96/96,recuperada
+M1-T9,recuperação,96,1.000,replace 96/96,recuperada,1.000,replace 96/96,recuperada,1.000,replace 96/96,recuperada
+M1-T10,recuperação,96,1.000,replace 96/96,não recuperada,1.000,replace 96/96,não recuperada,1.000,replace 96/96,não recuperada
+M2-T1-travel_2-relabel,recuperação,3,1.000,replace 3/3,indeterminada,1.000,replace 3/3,indeterminada,0.500,fail 3/3,não recuperada
+M2-T1-sequential-art_5-append-token,recuperação,3,1.000,replace 3/3,recuperada,1.000,replace 3/3,recuperada,0.708,replace 3/3,recuperada
+M2-T4-relabel,recuperação,0,sem entrada de log,mecanismo não acionado,não recuperada,sem entrada de log,mecanismo não acionado,não recuperada,sem entrada de log,mecanismo não acionado,não recuperada
+M5-T1-crime_51,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-historical_42,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-contemporary_38,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-health_47,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-biography_36,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-christian-fiction_34,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-psychology_26,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-art_25,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-autobiography_27,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-humor_30,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-travel_2,falso positivo,3,0.850,replace 3/3,falso positivo,0.425,fail 3/3,fail em todas,0.212,fail 3/3,fail em todas
+M5-T1-music_14,falso positivo,3,0.825,replace 3/3,falso positivo,0.825,replace 3/3,falso positivo,0.412,fail 3/3,fail em todas
+M5-T1-history_32,falso positivo,3,0.775,replace 3/3,falso positivo,0.388,fail 3/3,fail em todas,0.194,fail 3/3,fail em todas
+M5-T1-mystery_3,falso positivo,3,1.000,replace 3/3,falso positivo,1.000,replace 3/3,falso positivo,0.500,fail 3/3,fail em todas
+M5-T1-sequential-art_5,falso positivo,3,0.825,replace 3/3,falso positivo,0.825,replace 3/3,falso positivo,0.412,fail 3/3,fail em todas
+M5-T1-default_15,falso positivo,3,0.825,replace 3/3,falso positivo,0.825,replace 3/3,falso positivo,0.412,fail 3/3,fail em todas
+M5-T3,falso positivo,144,0.550; 1.000,fail 9/144; replace 135/144,falso positivo,0.500; 0.550; 1.000,fail 135/144; replace 9/144,falso positivo,0.250; 0.275; 0.500,fail 144/144,fail em todas
+M5-T4,falso positivo,0,sem entrada de log,mecanismo não acionado,não acionado,sem entrada de log,mecanismo não acionado,não acionado,sem entrada de log,mecanismo não acionado,não acionado
+M5-T5,falso positivo,48,0.825,replace 48/48,falso positivo,0.412,fail 48/48,fail em todas,0.206,fail 48/48,fail em todas
+M5-T6,falso positivo,51,0.775; 0.825; 0.850; 0.900; 1.000,replace 51/51,falso positivo,0.775; 0.825; 0.850; 0.900; 1.000,replace 51/51,falso positivo,0.388; 0.412; 0.425; 0.450; 0.500,fail 51/51,fail em todas
+M5-T7,falso positivo,48,0.900,replace 48/48,falso positivo,0.900,replace 48/48,falso positivo,0.450,fail 48/48,fail em todas
+M5-T8,falso positivo,96,1.000,replace 96/96,falso positivo,1.000,replace 96/96,falso positivo,0.500,fail 96/96,fail em todas
+M5-T9,falso positivo,96,1.000,replace 96/96,falso positivo,1.000,replace 96/96,falso positivo,0.500,fail 96/96,fail em todas
+M5-T10,falso positivo,96,0.925,replace 96/96,falso positivo,0.925,replace 96/96,falso positivo,0.925,replace 96/96,falso positivo

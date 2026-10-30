@@ -76,6 +76,14 @@ Classes por execução e agregação "na dúvida, contra o mecanismo": ADR-025. 
 - Recalculada offline a partir dos scores registrados; **secundária e aproximada** (ADR-027 (adendo); grade de 0,05, ADR-032, decidido depois dos dados). No limiar principal, 0,7: recuperadas 3/6, falso positivo bruto 1/24. [tabelas/19-sensibilidade-limiar.md](tabelas/19-sensibilidade-limiar.md) · [tabelas/20-scores-por-entrada.md](tabelas/20-scores-por-entrada.md)
 - Em 0,65: recuperadas 3/6 (indeterminadas 0), falso positivo 1/24. Em 0,75: recuperadas 2/6, falso positivo 1/24.
 
+## 9. Ablação do score (secundária, aproximada e posterior aos dados)
+
+- Recalculada offline a partir do log, com o limiar principal de 0,7; o candidato é o mesmo nas três configurações e só a decisão muda. Especificação vinda do texto da monografia e script escritos depois dos dados (ADR-033, especificação da monografia e script posteriores aos dados); classes e agregação do ADR-025, denominador da matriz (ADR-024) e "não acionado" (ADR-032, decidido depois dos dados). Execução que passaria de fail para replace no elemento certo fica indeterminada, nunca sucesso (ADR-027 (adendo)). [tabelas/23-ablacao-score.md](tabelas/23-ablacao-score.md) · [tabelas/24-ablacao-por-entrada.md](tabelas/24-ablacao-por-entrada.md)
+- **(i) rawScore: saída bruta da heurística estrutural:** recuperadas 3/6 (3/5 sem M2-T4-relabel), indeterminadas 1, com cura incorreta 0; falso positivo bruto 23/24 (23/23 sem M5-T4) (M5-T1-crime_51, M5-T1-historical_42, M5-T1-contemporary_38, M5-T1-health_47, M5-T1-biography_36, M5-T1-christian-fiction_34, M5-T1-psychology_26, M5-T1-art_25, M5-T1-autobiography_27, M5-T1-humor_30, M5-T1-travel_2, M5-T1-music_14, M5-T1-history_32, M5-T1-mystery_3, M5-T1-sequential-art_5, M5-T1-default_15, M5-T3, M5-T5, M5-T6, M5-T7, M5-T8, M5-T9, M5-T10); por alvo 8/9; T1: 16 de 16 categorias.
+- **(ii) rawScore × fator de ambiguidade:** recuperadas 3/6 (3/5 sem M2-T4-relabel), indeterminadas 1, com cura incorreta 0; falso positivo bruto 10/24 (10/23 sem M5-T4) (M5-T1-music_14, M5-T1-mystery_3, M5-T1-sequential-art_5, M5-T1-default_15, M5-T3, M5-T6, M5-T7, M5-T8, M5-T9, M5-T10); por alvo 7/9; T1: 4 de 16 categorias.
+- **(iii) score completo (registrado):** recuperadas 3/6 (3/5 sem M2-T4-relabel), indeterminadas 0, com cura incorreta 0; falso positivo bruto 1/24 (1/23 sem M5-T4) (M5-T10); por alvo 1/9; T1: 0 de 16 categorias.
+- Verificações: a configuração (iii) reproduz o resultado principal; score = rawScore × disagreement × ambiguity × text em 930/930 eventos; factors.disagreement = 1 em 930/930 eventos; heurística de atributos estáveis inaplicável em 930/930 eventos; rawScore = score da heurística estrutural em 930/930 eventos.
+
 ## Gráficos
 
 - [graficos/scores-por-entrada.svg](graficos/scores-por-entrada.svg): scores registrados por entrada, com o limiar principal.

@@ -623,3 +623,39 @@ Clone novo e a sequência completa, com a mesma configuração padrão, das 21:4
 **Consequência para quem clonar.** No Windows, com a configuração padrão, basta `core.longpaths` no clone, como diz o README. Antes do `9145d35`, um clone novo falhava no unitário acima e no `--check` sem nenhum defeito nos dados. Pela leitura do código, a ida e volta (`roundtrip.mts`) também falharia, pelo mesmo motivo: ela compara a baseline do disco com a captura. Isso não foi executado, porque ela acessa o site.
 
 **Anomalias.** A própria falha da tentativa 1, descrita acima.
+
+---
+
+## 2026-10-30 — Ablação do score de confiança
+
+**Objetivo.** Calcular offline a ablação do score prometida no texto da monografia, sobre o log da rodada principal. Ela usa três configurações com o limiar principal: (i) `rawScore`, (ii) `rawScore` × fator de ambiguidade e (iii) o score registrado. **Nenhuma execução contra o site.** A especificação veio do texto da monografia, e o script foi escrito depois da coleta e da análise principal (ADR-033).
+
+**Ambiente.** Node v24.14.0, Playwright 1.63.0, Windows 11 Home build 26200.9711. Sem rede.
+
+**Commits**, na branch `analysis/ablacao`, nesta ordem:
+1. `e96dc16`: só o ADR-033, antes de qualquer código;
+2. `527c327`: o módulo `experiments/ablationAnalysis.mts`, a ligação com `experiments/resultsAnalysis.mts` e 13 unitários. A análise **não foi rodada sobre os dados** antes deste commit, nem em memória;
+3. `336eb52`: as saídas geradas.
+
+**Comandos e resultados.**
+
+| Comando | Resultado |
+|---|---|
+| `npx tsc -p .` | Sem erros |
+| `npx playwright test --config=playwright.unit.config.ts` | 167/167. Eram 154; entraram 13 |
+| `node experiments/resultsAnalysis.mts` | 53 arquivos em `experiments/analysis/`. Eram 49; entraram as tabelas `23-ablacao-score` e `24-ablacao-por-entrada`, em `.md` e `.csv` |
+| A mesma geração, duas vezes, com `diff -r` entre elas | Nenhuma diferença |
+| `node experiments/resultsAnalysis.mts --check` | 53 arquivos idênticos ao gerado |
+
+**Saídas que já existiam.** As 48 outras ficaram idênticas byte a byte. O `RESUMO.md` ganhou só a seção "9. Ablação do score", com 8 linhas acrescentadas e nenhuma removida.
+
+**Verificações obrigatórias**, todas aprovadas. Qualquer uma que falhasse interromperia a análise.
+1. A configuração (iii) reproduz o resultado principal: a classe de cada execução, o desfecho das 30 entradas e as frações.
+2. score = `rawScore` × `disagreement` × `ambiguity` × `text` em 930/930 eventos do log, com tolerância de 1e-9.
+3. `factors.disagreement = 1` em 930/930.
+4. Heurística de atributos estáveis inaplicável em 930/930.
+5. `rawScore` igual ao score da heurística estrutural em 930/930. Esta foi acrescentada no ADR-033.
+
+**Resultado resumido.** Está completo em `experiments/analysis/RESUMO.md`, seção 9. A recuperação ficou em 3/6 nas três configurações, com uma indeterminada em (i) e em (ii): o M2-T1-travel_2-relabel. O falso positivo bruto foi 23/24 em (i), 10/24 em (ii) e 1/24 em (iii).
+
+**Anomalias.** Nenhuma.
